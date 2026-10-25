@@ -139,6 +139,18 @@
       pointer-events: none;
       animation: drop-ripple .28s ease-out both;
     }
+    .tile.hint {
+      position: relative;
+      z-index: 2;
+      outline: 3px solid #ffe279;
+      outline-offset: -3px;
+      box-shadow: inset 0 0 0 2px #fff, 0 0 14px 4px #ffe279;
+      animation: hint-pulse .8s ease-in-out 3;
+    }
+    @keyframes hint-pulse {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(.9); filter: brightness(1.3); }
+    }
     @keyframes drop-clear {
       0% { transform: scale(1); opacity: 1; filter: brightness(1); }
       18% { transform: scale(1.1); opacity: 1; filter: brightness(1.5); }
@@ -187,20 +199,6 @@
     }
     .new-game:active { transform: translateY(3px); box-shadow: 0 1px 0 #761323; }
     .new-game:disabled { opacity: .6; cursor: wait; }
-    .actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-    .settings-button { width: 42px; min-height: 42px; display: grid; place-items: center; padding: 0; border: 1px solid #d9b7ac; border-radius: 50%; background: #fffaf2; color: var(--wine); font-size: 22px; cursor: pointer; touch-action: manipulation; }
-    .settings-button:disabled { opacity: .6; cursor: wait; }
-    .settings-button:focus-visible, .settings-select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-    .tile.hint { position: relative; z-index: 2; outline: 3px solid #ffe279; outline-offset: -3px; box-shadow: inset 0 0 0 2px #fff, 0 0 14px 4px #ffe279; animation: hint-pulse .8s ease-in-out 3; }
-    @keyframes hint-pulse { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(.9); filter: brightness(1.3); } }
-    .settings-overlay { position: absolute; z-index: 11; inset: 0; display: grid; place-items: center; padding: 20px; background: #310913a8; backdrop-filter: blur(3px); }
-    .settings-overlay[hidden] { display: none; }
-    .settings-card { width: min(92%, 390px); padding: clamp(20px, 4vw, 30px); border: 2px solid #fff; border-radius: 22px; background: var(--cream); box-shadow: 0 14px 40px #26000c55; }
-    .settings-card h2 { margin: 0 0 18px; color: var(--wine); font-size: clamp(22px, 4vw, 30px); }
-    .settings-card label { display: block; margin-bottom: 7px; color: #725459; font-weight: 900; }
-    .settings-select { width: 100%; min-height: 46px; padding: 9px 12px; border: 1px solid #d9b7ac; border-radius: 12px; background: #fff; color: var(--ink); font: inherit; font-weight: 800; }
-    .settings-help { margin: 10px 0 20px; color: #725459; font-size: 14px; line-height: 1.45; }
-    .settings-card .new-game { width: 100%; }
     .status {
       position: absolute;
       z-index: 4;
@@ -244,6 +242,18 @@
     }
     .win-card h1 { margin: 0 0 10px; color: var(--wine); font-size: clamp(24px, 4vw, 38px); }
     .win-card p { margin: 0 0 20px; color: #725459; font-weight: 700; line-height: 1.5; }
+    .donor-wish {
+      margin: -6px 0 20px;
+      padding: 12px 14px;
+      border: 1px solid #f0d1c2;
+      border-radius: 14px;
+      background: #fff0e8;
+      color: #7c2533;
+      font-size: clamp(14px, 2vw, 16px);
+      font-weight: 800;
+      line-height: 1.45;
+      text-wrap: balance;
+    }
     @media (max-width: 900px) and (orientation: portrait) {
       .scene {
         width: 100vw;
@@ -319,9 +329,7 @@
       .stat-label { font-size: 7px; }
       .stat-value { font-size: clamp(15px, 4.2vw, 19px); }
       .instructions { grid-column: 1 / 3; grid-row: 2; font-size: 9px; line-height: 1.25; }
-      .actions { grid-column: 3; grid-row: 1 / 3; gap: 5px; }
-      .settings-button { width: 36px; min-height: 40px; flex: 0 0 36px; font-size: 20px; }
-      .new-game { min-height: 40px; padding: 7px 9px; font-size: 11px; white-space: nowrap; }
+      .new-game { grid-column: 3; grid-row: 1 / 3; min-height: 40px; padding: 7px 9px; font-size: 11px; white-space: nowrap; }
       .status { bottom: 7%; border-radius: 14px; }
     }
     @media (max-width: 380px) and (orientation: portrait) {
@@ -332,8 +340,6 @@
       .target-description { font-size: 9px; }
       .progress-track { min-width: 52px; }
       .board { width: min(96%, 60dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 262px)); }
-      .actions { gap: 4px; }
-      .settings-button { width: 34px; min-height: 38px; flex-basis: 34px; }
       .new-game { padding-inline: 7px; font-size: 10px; }
     }
     @media (max-height: 620px) and (orientation: landscape) {
@@ -356,7 +362,7 @@
 
       <div class="hud-stack">
         <section class="target-panel" aria-live="polite" aria-label="Завдання рівня">
-          <p class="target-kicker" id="targetKicker">Рівень ${level} · ціль</p>
+          <p class="target-kicker" id="targetKicker">Рівень 1 · ціль</p>
           <img class="target-drop" id="targetDrop" alt="">
           <h1 class="target-name" id="targetName">I+</h1>
           <p class="target-description">Збери краплинки цієї групи</p>
@@ -367,34 +373,18 @@
           <div class="stat"><span class="stat-label">Рахунок</span><strong class="stat-value" id="score">0</strong></div>
           <div class="stat"><span class="stat-label">Вдалі ходи</span><strong class="stat-value" id="moves">0</strong></div>
           <p class="instructions">Переставляй сусідні краплинки. Лінія з 3 або більше однакових збирається автоматично.</p>
-          <div class="actions">
-            <button class="settings-button" id="settingsButton" type="button" aria-label="Налаштування складності" title="Налаштування складності">⚙</button>
-            <button class="new-game" id="newGame" type="button">Нова гра</button>
-          </div>
+          <button class="new-game" id="newGame" type="button">Нова гра</button>
         </section>
       </div>
 
       <div class="board" id="board" role="grid" aria-label="Ігрове поле, 8 на 8"></div>
       <div class="status" id="status" role="status" aria-live="polite"></div>
 
-      <div class="settings-overlay" id="settingsOverlay" hidden>
-        <section class="settings-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-          <h2 id="settingsTitle">Налаштування гри</h2>
-          <label for="difficultySelect">Складність</label>
-          <select class="settings-select" id="difficultySelect">
-            <option value="relaxed">Полегшена · 26% потрібної групи</option>
-            <option value="standard">Звичайна · 20% потрібної групи</option>
-            <option value="challenging">Вимоглива · 14% потрібної групи</option>
-          </select>
-          <p class="settings-help">Режим визначає, як часто з'являтимуться краплинки цільової групи. Налаштування зберігається для наступних запусків.</p>
-          <button class="new-game" id="closeSettings" type="button">Готово</button>
-        </section>
-      </div>
-
       <div class="win-overlay" id="winOverlay" hidden>
         <section class="win-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
           <h1 id="winTitle">Рівень виконано!</h1>
           <p id="winMessage">Групу зібрано.</p>
+          <p class="donor-wish" id="donorWish"></p>
           <button class="new-game" id="playAgain" type="button">Наступний рівень</button>
         </section>
       </div>
@@ -403,8 +393,41 @@
   <script>
     (() => {
       const size = 8;
-      const goalPerLevel = 10;
       const difficultyChances = { relaxed: 0.26, standard: 0.20, challenging: 0.14 };
+      const difficultyModes = Object.keys(difficultyChances);
+      const donorWishes = [
+        "Дякуємо, що даруєте надію — ваша доброта має велику силу.",
+        "Нехай добро, яким ви ділитеся, повертається до вас сторицею.",
+        "Ваша готовність допомогти — справжній приклад людяності.",
+        "Краплина турботи від вас може стати великою підтримкою для когось.",
+        "Дякуємо за щедре серце й тепло, яким ви ділитеся.",
+        "Ваша доброта надихає інших робити добрі справи.",
+        "Нехай у вашому житті буде стільки ж турботи, скільки ви даруєте іншим.",
+        "Донорство починається з небайдужості. Дякуємо за ваше велике серце.",
+        "Ваш вчинок нагадує: разом ми можемо підтримати одне одного.",
+        "Дякуємо, що обираєте шлях милосердя та взаємодопомоги.",
+        "Хай кожен день приносить вам радість, яку ви даруєте іншим.",
+        "Ваша турбота — промінь надії для тих, кому потрібна підтримка.",
+        "Дякуємо, що знаходите сили бути поруч із тими, хто потребує допомоги.",
+        "Нехай добро, посіяне вами, розквітає навколо.",
+        "Ваше рішення допомогти — прояв відваги й щирого співчуття.",
+        "Дякуємо за щирість, небайдужість і бажання підтримати.",
+        "Світ стає теплішим завдяки людям, які не проходять повз.",
+        "Ваша участь дарує комусь важливу підтримку у складний час.",
+        "Нехай ваша доброта надихає, а серце відчуває вдячність.",
+        "Дякуємо, що додаєте більше людяності в цей світ.",
+        "Ви робите важливу справу — нехай навколо вас множиться добро.",
+        "Нехай ваша щедрість повертається світлими зустрічами й добрими новинами.",
+        "Дякуємо, що даруєте не лише кров, а й віру у взаємодопомогу.",
+        "Ваша небайдужість допомагає творити суспільство, де підтримують одне одного.",
+        "Турбота про інших починається з доброго рішення. Дякуємо за ваше.",
+        "Нехай вас завжди оточують люди, готові підтримати вас так само щиро, як ви підтримуєте інших.",
+        "Ви подаєте приклад, який надихає. Дякуємо за вашу людяність.",
+        "Щедрість вашого серця робить світ добрішим.",
+        "Дякуємо, що долучаєтеся до справи, у якій важлива кожна краплина.",
+        "Нехай у вашому житті буде багато світла — ви щедро ділитеся ним з іншими."
+      ];
+      const donorWishStorageKey = "blood-group-game-wish-deck";
       const types = [
         { id: "I+", name: "I+", image: "drop-i-plus.png", alt: "Перша позитивна", color: "#4fb9d4" },
         { id: "I−", name: "I−", image: "drop-i-minus.png", alt: "Перша негативна", color: "#9a72d7" },
@@ -428,12 +451,9 @@
       const statusElement = document.getElementById("status");
       const winOverlay = document.getElementById("winOverlay");
       const newGameButton = document.getElementById("newGame");
-      const settingsButton = document.getElementById("settingsButton");
-      const settingsOverlay = document.getElementById("settingsOverlay");
-      const difficultySelect = document.getElementById("difficultySelect");
-      const closeSettingsButton = document.getElementById("closeSettings");
       const winTitle = document.getElementById("winTitle");
       const winMessage = document.getElementById("winMessage");
+      const donorWishElement = document.getElementById("donorWish");
       const playAgainButton = document.getElementById("playAgain");
       let cells = [];
       let level = 1;
@@ -450,15 +470,34 @@
       let statusTimer = 0;
       let hintTimer = 0;
       let currentDifficulty = "standard";
-
-      try {
-        const savedDifficulty = localStorage.getItem("blood-group-game-difficulty");
-        if (difficultyChances[savedDifficulty]) currentDifficulty = savedDifficulty;
-      } catch {}
-      difficultySelect.value = currentDifficulty;
+      let donorWishDeck = loadDonorWishDeck();
 
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
       const randomTarget = () => types[Math.floor(Math.random() * types.length)].id;
+      const randomDifficulty = () => difficultyModes[Math.floor(Math.random() * difficultyModes.length)];
+      function loadDonorWishDeck() {
+        try {
+          const savedDeck = JSON.parse(localStorage.getItem(donorWishStorageKey));
+          if (Array.isArray(savedDeck) && savedDeck.every(index => Number.isInteger(index) && index >= 0 && index < donorWishes.length) && new Set(savedDeck).size === savedDeck.length) return savedDeck;
+        } catch {}
+        return [];
+      }
+      function shuffledDonorWishDeck() {
+        const deck = donorWishes.map((_, index) => index);
+        for (let index = deck.length - 1; index > 0; index--) {
+          const other = Math.floor(Math.random() * (index + 1));
+          [deck[index], deck[other]] = [deck[other], deck[index]];
+        }
+        return deck;
+      }
+      function nextDonorWish() {
+        if (!donorWishDeck.length) donorWishDeck = shuffledDonorWishDeck();
+        const wish = donorWishes[donorWishDeck.pop()];
+        try {
+          localStorage.setItem(donorWishStorageKey, JSON.stringify(donorWishDeck));
+        } catch {}
+        return wish;
+      }
       function randomType(choices = types) {
         const availableTarget = choices.some(type => type.id === target);
         if (availableTarget && Math.random() < difficultyChances[currentDifficulty]) return target;
@@ -536,7 +575,7 @@
             }
           }
           cells = next;
-          if (findHintMove()) return;
+          if (hasPossibleMove()) return;
         }
         cells = Array.from({ length: size * size }, (_, index) => types[(index + Math.floor(index / size)) % types.length].id);
       }
@@ -546,7 +585,8 @@
         cells.forEach((type, index) => {
           const tile = document.createElement("button");
           tile.type = "button";
-          tile.className = "tile"; tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
+          tile.className = "tile";
+          tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
           if (selected === index && !busy) tile.classList.add("selected");
           if (clear.has(index)) tile.classList.add("clearing");
           tile.dataset.index = String(index);
@@ -578,7 +618,7 @@
           if (busy || complete) return;
           const move = findHintMove();
           if (move) move.forEach(index => boardElement.children[index]?.classList.add("hint"));
-        }, 5000);
+        }, 15000);
       }
 
       function updateHud() {
@@ -595,8 +635,6 @@
         scoreElement.textContent = score.toLocaleString("uk-UA");
         movesElement.textContent = String(moves);
         newGameButton.disabled = busy;
-        settingsButton.disabled = busy;
-        resetHintTimer();
         if (type) targetName.setAttribute("aria-label", `${type.alt}, група ${type.id}`);
       }
 
@@ -612,6 +650,7 @@
         clearHint();
         winTitle.textContent = `Рівень ${level} пройдено!`;
         winMessage.textContent = `Зібрано ${goal} краплинок групи ${target}. Рахунок: ${score.toLocaleString("uk-UA")}.`;
+        donorWishElement.textContent = nextDonorWish();
         playAgainButton.textContent = "Наступний рівень";
         winOverlay.hidden = false;
         playAgainButton.focus();
@@ -654,11 +693,12 @@
           showWin();
           return;
         }
-        if (!findHintMove()) {
+        if (!hasPossibleMove()) {
           makeBoard();
           renderBoard();
           showStatus("Ходів не залишилося — поле перемішано.");
         }
+        resetHintTimer();
       }
 
       async function swap(first, second) {
@@ -740,7 +780,8 @@
 
       function startLevel() {
         target = randomTarget();
-        goal = level * goalPerLevel;
+        currentDifficulty = randomDifficulty();
+        goal = level * 10;
         collected = 0;
         selected = null;
         busy = false;
@@ -764,30 +805,6 @@
         startLevel();
       }
 
-      function closeSettings() {
-        settingsOverlay.hidden = true;
-        resetHintTimer();
-        settingsButton.focus();
-      }
-
-      settingsButton.addEventListener("click", () => {
-        clearHint();
-        settingsOverlay.hidden = false;
-        difficultySelect.focus();
-      });
-      closeSettingsButton.addEventListener("click", closeSettings);
-      settingsOverlay.addEventListener("click", event => {
-        if (event.target === settingsOverlay) closeSettings();
-      });
-      document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && !settingsOverlay.hidden) closeSettings();
-      });
-      difficultySelect.addEventListener("change", () => {
-        currentDifficulty = difficultySelect.value;
-        try {
-          localStorage.setItem("blood-group-game-difficulty", currentDifficulty);
-        } catch {}
-      });
       newGameButton.addEventListener("click", startNewGame);
       playAgainButton.addEventListener("click", advanceLevel);
       startNewGame();
