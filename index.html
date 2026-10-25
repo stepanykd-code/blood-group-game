@@ -107,8 +107,8 @@
       display: grid;
       place-items: center;
       overflow: hidden;
-      padding: 2px;
-      border: 1px solid #8e384088;
+      padding: clamp(3px, .4vw, 5px);
+      border: 2px solid var(--drop-color, #8e384088);
       border-radius: clamp(4px, .55vw, 9px);
       background: var(--drop-color, #fff5e5);
       box-shadow: inset 0 0 0 1px #fff8;
