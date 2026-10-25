@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Краплик — перегляд ходьби</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#edf4e8;color:#463a2f;font-family:system-ui,"Segoe UI",sans-serif}.card{width:min(780px,100%);padding:24px;border:3px solid #b98a50;border-radius:24px;background:#fff8e8;box-shadow:0 8px #8c673f;text-align:center}h1{margin:0 0 8px;font-size:clamp(24px,5vw,38px)}p{margin:6px 0 18px}.stage{height:min(460px,62vh);min-height:320px;display:grid;place-items:center;overflow:hidden;border:2px solid #d5bd8a;border-radius:16px;background-color:#fff;background-image:linear-gradient(45deg,#e5e6df 25%,transparent 25%),linear-gradient(-45deg,#e5e6df 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e6df 75%),linear-gradient(-45deg,transparent 75%,#e5e6df 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}.stage canvas{height:min(400px,56vh);width:auto;max-width:92%;object-fit:contain}.controls{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:18px}button{border:0;border-radius:999px;padding:11px 20px;background:#58945e;color:white;font-weight:800;font-size:16px;cursor:pointer}button.secondary{background:#8d7557}label{font-weight:700}input{accent-color:#58945e}output{min-width:62px;font-variant-numeric:tabular-nums}.hint{margin-top:14px;color:#756655;font-size:14px}#status{font-weight:800;color:#7a5a31;min-height:24px}
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Краплик — ходьба</h1>
+  <p>Кадри вирівнюються за тулубом і лінією стоп, щоб Краплик ішов на місці.</p>
+  <div class="stage"><canvas id="frame" width="272" height="430" role="img" aria-label="Краплик іде вправо"></canvas></div>
+  <div id="status">Готую вирівняні кадри…</div>
+  <div class="controls">
+    <button id="toggle" disabled>⏸ Пауза</button>
+    <label for="speed">Швидкість</label>
+    <input id="speed" type="range" min="5" max="16" step="1" value="9">
+    <output id="speedValue">9 кадрів/с</output>
+    <button class="secondary" id="download" disabled>⬇ Завантажити вирівняний спрайтшит</button>
+  </div>
+  <div class="hint">Шахове тло показує прозорість. Вирівняний PNG можна завантажити окремо.</div>
+</main>
+<script>
+const FRAME_W=272,FRAME_H=430,FRAME_COUNT=8,BASELINE=392;
+const image=new Image();image.src='kraplyk-walk-sheet.png';
+const view=document.querySelector('#frame'),vctx=view.getContext('2d');
+const toggle=document.querySelector('#toggle'),speed=document.querySelector('#speed'),speedValue=document.querySelector('#speedValue'),status=document.querySelector('#status'),download=document.querySelector('#download');
+let frames=[],sheet=null,playing=true,frameIndex=0,lastTime=0,interval=1000/9;
+
+function findSprites(ctx,w,h){
+  const data=ctx.getImageData(0,0,w,h).data;
+  return Array.from({length:FRAME_COUNT},(_,i)=>{
+    const x0=Math.round(i*w/FRAME_COUNT),x1=Math.round((i+1)*w/FRAME_COUNT);
+    let y0=h,y1=0,torsoSum=0,torsoX=0;
+    for(let x=x0;x<x1;x++)for(let y=0;y<h;y++){const a=data[(y*w+x)*4+3];if(a>32){if(y<y0)y0=y;if(y+1>y1)y1=y+1}}
+    const top=y0+(y1-y0)*.2,bottom=y0+(y1-y0)*.76;
+    for(let x=x0;x<x1;x++)for(let y=Math.floor(top);y<Math.ceil(bottom);y++){const a=data[(y*w+x)*4+3];if(a>32){torsoX+=x*a;torsoSum+=a}}
+    return {x0,x1,y0,y1,anchorX:torsoSum?torsoX/torsoSum:(x0+x1)/2};
+  });
+}
+
+function build(){
+  const source=document.createElement('canvas');source.width=image.naturalWidth;source.height=image.naturalHeight;
+  const sctx=source.getContext('2d',{willReadFrequently:true});sctx.drawImage(image,0,0);
+  const boxes=findSprites(sctx,source.width,source.height);
+  const maxW=Math.max(...boxes.map(b=>b.x1-b.x0)),maxH=Math.max(...boxes.map(b=>b.y1-b.y0));
+  const scale=Math.min(1,(FRAME_W-22)/maxW,(BASELINE-22)/maxH);
+  frames=[];sheet=document.createElement('canvas');sheet.width=FRAME_W*FRAME_COUNT;sheet.height=FRAME_H;const sh=sheet.getContext('2d');
+  boxes.forEach((b,i)=>{
+    const w=(b.x1-b.x0)*scale,h=(b.y1-b.y0)*scale;
+    const x=i*FRAME_W+FRAME_W/2-(b.anchorX-b.x0)*scale;
+    const y=BASELINE-h;
+    const c=document.createElement('canvas');c.width=FRAME_W;c.height=FRAME_H;const cx=c.getContext('2d');
+    cx.drawImage(source,b.x0,b.y0,b.x1-b.x0,b.y1-b.y0,x-i*FRAME_W,y,w,h);
+    frames.push(c);sh.drawImage(c,i*FRAME_W,0);
+  });
+  status.textContent=`Готово: ${frames.length} вирівняних кадрів`;
+  toggle.disabled=false;download.disabled=false;draw(0);requestAnimationFrame(animate);
+}
+function draw(i){if(frames[i])vctx.clearRect(0,0,FRAME_W,FRAME_H),vctx.drawImage(frames[i],0,0)}
+function animate(time){if(playing&&time-lastTime>=interval){frameIndex=(frameIndex+1)%FRAME_COUNT;draw(frameIndex);lastTime=time}requestAnimationFrame(animate)}
+image.onload=build;
+image.onerror=()=>status.textContent='Не вдалося завантажити kraplyk-walk-sheet.png';
+toggle.addEventListener('click',()=>{playing=!playing;toggle.textContent=playing?'⏸ Пауза':'▶ Продовжити'});
+speed.addEventListener('input',()=>{interval=1000/Number(speed.value);speedValue.value=`${speed.value} кадрів/с`});
+download.addEventListener('click',()=>sheet.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='kraplyk-walk-aligned.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)},'image/png'));
+</script>
+</body>
+</html>
