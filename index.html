@@ -233,6 +233,8 @@
     .win-overlay[hidden] { display: none; }
     .win-card {
       width: min(92%, 420px);
+      max-height: min(94dvh, 720px);
+      overflow-y: auto;
       padding: clamp(20px, 4vw, 34px);
       border: 2px solid white;
       border-radius: 24px;
@@ -254,6 +256,57 @@
       line-height: 1.45;
       text-wrap: balance;
     }
+    .ticket-name-label {
+      display: block;
+      margin: 0 0 6px;
+      color: #725459;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: left;
+    }
+    .ticket-name-input {
+      width: 100%;
+      min-height: 44px;
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border: 1px solid #d9b8ad;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--wine);
+      font: inherit;
+      font-size: 16px;
+    }
+    .ticket-button {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      margin: 0 0 10px;
+      padding: 10px 14px;
+      border: 1px solid #a72b3d;
+      border-radius: 13px;
+      background: linear-gradient(180deg, #fff, #f9e6dd);
+      color: var(--wine);
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .ticket-button:disabled { opacity: .65; cursor: wait; }
+    .ticket-button[hidden] { display: none; }
+    .ticket-button.secondary {
+      border-color: #dfc3b7;
+      background: #fffdf9;
+      color: #7c2533;
+    }
+    .ticket-status {
+      min-height: 1.3em;
+      margin: 0 0 10px;
+      color: #725459;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .ticket-status:empty { display: none; }
+    .win-card #playAgain { width: 100%; }
     @media (max-width: 900px) and (orientation: portrait) {
       .scene {
         width: 100vw;
@@ -385,6 +438,11 @@
           <h1 id="winTitle">Рівень виконано!</h1>
           <p id="winMessage">Групу зібрано.</p>
           <p class="donor-wish" id="donorWish"></p>
+          <label class="ticket-name-label" for="ticketName">Ім’я або псевдонім для квитка</label>
+          <input class="ticket-name-input" id="ticketName" type="text" maxlength="24" autocomplete="nickname" placeholder="Наприклад, Донор 2026">
+          <button class="ticket-button" id="createTicket" type="button">Завантажити PDF-білет</button>
+          <button class="ticket-button secondary" id="shareTicket" type="button" hidden>Поділитися квитком</button>
+          <p class="ticket-status" id="ticketStatus" role="status" aria-live="polite"></p>
           <button class="new-game" id="playAgain" type="button">Наступний рівень</button>
         </section>
       </div>
@@ -455,6 +513,10 @@
       const winMessage = document.getElementById("winMessage");
       const donorWishElement = document.getElementById("donorWish");
       const playAgainButton = document.getElementById("playAgain");
+      const ticketNameInput = document.getElementById("ticketName");
+      const createTicketButton = document.getElementById("createTicket");
+      const shareTicketButton = document.getElementById("shareTicket");
+      const ticketStatus = document.getElementById("ticketStatus");
       let cells = [];
       let level = 1;
       let target = types[0].id;
@@ -471,6 +533,7 @@
       let hintTimer = 0;
       let currentDifficulty = "standard";
       let donorWishDeck = loadDonorWishDeck();
+      let createdTicketFile = null;
 
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
       const randomTarget = () => types[Math.floor(Math.random() * types.length)].id;
@@ -645,15 +708,284 @@
         statusTimer = setTimeout(() => statusElement.classList.remove("visible"), 1700);
       }
 
+      function loadTicketImage(source) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error(`Не вдалося завантажити зображення: ${source}`));
+          image.src = source;
+        });
+      }
+
+      function drawRoundedRect(context, x, y, width, height, radius) {
+        context.beginPath();
+        const r = Math.min(radius, width / 2, height / 2);
+        context.moveTo(x + r, y);
+        context.lineTo(x + width - r, y);
+        context.arcTo(x + width, y, x + width, y + r, r);
+        context.lineTo(x + width, y + height - r);
+        context.arcTo(x + width, y + height, x + width - r, y + height, r);
+        context.lineTo(x + r, y + height);
+        context.arcTo(x, y + height, x, y + height - r, r);
+        context.lineTo(x, y + r);
+        context.arcTo(x, y, x + r, y, r);
+        context.closePath();
+      }
+
+      function drawContainedImage(context, image, x, y, width, height) {
+        const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+        const drawWidth = image.naturalWidth * scale;
+        const drawHeight = image.naturalHeight * scale;
+        context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+      }
+
+      function wrapTicketText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+        const words = text.split(/\s+/);
+        const lines = [];
+        let line = "";
+        for (const word of words) {
+          const candidate = line ? `${line} ${word}` : word;
+          if (line && context.measureText(candidate).width > maxWidth) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = candidate;
+          }
+        }
+        if (line) lines.push(line);
+        const visibleLines = lines.slice(0, maxLines);
+        if (lines.length > maxLines) visibleLines[maxLines - 1] = `${visibleLines[maxLines - 1].replace(/[.,;:!?…]?$/, "…")}`;
+        visibleLines.forEach((item, index) => context.fillText(item, x, y + index * lineHeight));
+      }
+
+      async function drawTicketCanvas() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 1600;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas is unavailable");
+
+        const [logo, drop] = await Promise.all([
+          loadTicketImage("assets/station-logo.png"),
+          loadTicketImage(imageFor[target])
+        ]);
+        const width = canvas.width;
+        const height = canvas.height;
+        context.fillStyle = "#f8eee7";
+        context.fillRect(0, 0, width, height);
+        context.save();
+        context.shadowColor = "#57111d33";
+        context.shadowBlur = 34;
+        context.shadowOffsetY = 12;
+        drawRoundedRect(context, 44, 44, 1112, 1512, 54);
+        context.fillStyle = "#fffdf9";
+        context.fill();
+        context.restore();
+        drawRoundedRect(context, 44, 44, 1112, 1512, 54);
+        context.lineWidth = 5;
+        context.strokeStyle = "#b74d57";
+        context.stroke();
+
+        const header = context.createLinearGradient(70, 70, 1130, 490);
+        header.addColorStop(0, "#7d1627");
+        header.addColorStop(1, "#c7474d");
+        drawRoundedRect(context, 68, 68, 1064, 420, 42);
+        context.fillStyle = header;
+        context.fill();
+        context.globalAlpha = 0.12;
+        context.fillStyle = "#fff";
+        context.beginPath();
+        context.arc(1000, 150, 175, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.arc(170, 440, 120, 0, Math.PI * 2);
+        context.fill();
+        context.globalAlpha = 1;
+        drawContainedImage(context, logo, 430, 88, 340, 150);
+
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillStyle = "#fffaf2";
+        context.font = "900 55px system-ui, Arial, sans-serif";
+        context.fillText("ІГРОВИЙ КВИТОК", 600, 310);
+        context.font = "700 25px system-ui, Arial, sans-serif";
+        context.fillText("КРАПЛИНКИ ДОБРА · ВАШ РЕЗУЛЬТАТ", 600, 382);
+
+        context.fillStyle = "#8c2635";
+        context.textAlign = "left";
+        context.font = "800 25px system-ui, Arial, sans-serif";
+        context.fillText("ГРАВЕЦЬ", 112, 548);
+        context.fillStyle = "#35151c";
+        context.font = "800 48px system-ui, Arial, sans-serif";
+        context.fillText((ticketNameInput.value.trim() || "Гравець").slice(0, 24), 112, 610, 960);
+        context.strokeStyle = "#edd8cf";
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(112, 652);
+        context.lineTo(1088, 652);
+        context.stroke();
+
+        drawRoundedRect(context, 100, 700, 1000, 282, 36);
+        const scorePanel = context.createLinearGradient(100, 700, 1100, 982);
+        scorePanel.addColorStop(0, "#fff0e8");
+        scorePanel.addColorStop(1, "#f9ddd5");
+        context.fillStyle = scorePanel;
+        context.fill();
+        context.textAlign = "center";
+        context.fillStyle = "#8c2635";
+        context.font = "800 27px system-ui, Arial, sans-serif";
+        context.fillText("ВАШ РАХУНОК", 600, 758);
+        context.fillStyle = "#7c1729";
+        context.font = "900 112px system-ui, Arial, sans-serif";
+        context.fillText(score.toLocaleString("uk-UA"), 600, 860, 890);
+        context.fillStyle = "#79565a";
+        context.font = "700 25px system-ui, Arial, sans-serif";
+        context.fillText("Кожен хід — ще одна краплина наполегливості", 600, 934);
+
+        const statY = 1020;
+        const statWidth = 300;
+        const statGap = 38;
+        const statX = [100, 100 + statWidth + statGap, 100 + (statWidth + statGap) * 2];
+        const statLabels = ["РІВЕНЬ", "ГРУПА КРОВІ", "ЗІБРАНО"];
+        const statValues = [String(level), target, `${collected} крап.`];
+        for (let index = 0; index < 3; index++) {
+          drawRoundedRect(context, statX[index], statY, statWidth, 190, 28);
+          context.fillStyle = index === 1 ? "#fff0e7" : "#fff8ef";
+          context.fill();
+          context.strokeStyle = "#ecd4cb";
+          context.lineWidth = 2;
+          context.stroke();
+          context.textAlign = "center";
+          context.fillStyle = "#8c2635";
+          context.font = "800 21px system-ui, Arial, sans-serif";
+          context.fillText(statLabels[index], statX[index] + statWidth / 2, statY + 43);
+          context.fillStyle = "#35151c";
+          context.font = index === 1 ? "900 55px system-ui, Arial, sans-serif" : "900 42px system-ui, Arial, sans-serif";
+          context.fillText(statValues[index], statX[index] + statWidth / 2, statY + 112, statWidth - 24);
+        }
+        drawContainedImage(context, drop, statX[1] + 116, statY + 150, 68, 36);
+
+        drawRoundedRect(context, 100, 1250, 1000, 190, 30);
+        context.fillStyle = "#fff0e8";
+        context.fill();
+        context.textAlign = "center";
+        context.fillStyle = "#8c2635";
+        context.font = "800 22px system-ui, Arial, sans-serif";
+        context.fillText("ВАШЕ МОТИВАЦІЙНЕ ПОБАЖАННЯ", 600, 1290);
+        context.fillStyle = "#54212b";
+        context.font = "700 27px system-ui, Arial, sans-serif";
+        wrapTicketText(context, donorWishElement.textContent, 600, 1340, 880, 39, 2);
+
+        context.fillStyle = "#725459";
+        context.font = "700 21px system-ui, Arial, sans-serif";
+        context.fillText(new Intl.DateTimeFormat("uk-UA", { dateStyle: "long" }).format(new Date()), 600, 1480);
+        context.fillStyle = "#8c2635";
+        context.font = "800 18px system-ui, Arial, sans-serif";
+        context.fillText("ЦЕ ІГРОВЕ ДОСЯГНЕННЯ, А НЕ МЕДИЧНИЙ ДОКУМЕНТ", 600, 1522);
+        return canvas;
+      }
+
+      async function createTicketPdf() {
+        const canvas = await drawTicketCanvas();
+        const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.96));
+        if (!imageBlob) throw new Error("Could not encode ticket image");
+        const imageBytes = new Uint8Array(await imageBlob.arrayBuffer());
+        const encoder = new TextEncoder();
+        const chunks = [];
+        let byteLength = 0;
+        const add = value => {
+          const bytes = typeof value === "string" ? encoder.encode(value) : value;
+          chunks.push(bytes);
+          byteLength += bytes.length;
+        };
+
+        add("%PDF-1.4\n");
+        add(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
+        const offsets = [0];
+        const addObject = (number, content) => {
+          offsets[number] = byteLength;
+          add(`${number} 0 obj\n${content}\nendobj\n`);
+        };
+        addObject(1, "<< /Type /Catalog /Pages 2 0 R >>");
+        addObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        addObject(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 432 576] /Resources << /XObject << /Ticket 4 0 R >> >> /Contents 5 0 R >>");
+        offsets[4] = byteLength;
+        add(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`);
+        add(imageBytes);
+        add("\nendstream\nendobj\n");
+        const pageContent = "q\n432 0 0 576 0 0 cm\n/Ticket Do\nQ\n";
+        const contentBytes = encoder.encode(pageContent);
+        offsets[5] = byteLength;
+        add(`5 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
+        add(contentBytes);
+        add("endstream\nendobj\n");
+        const xrefOffset = byteLength;
+        add("xref\n0 6\n0000000000 65535 f \n");
+        for (let index = 1; index <= 5; index++) add(`${String(offsets[index]).padStart(10, "0")} 00000 n \n`);
+        add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+        return new Blob(chunks, { type: "application/pdf" });
+      }
+
+      async function downloadTicket() {
+        createTicketButton.disabled = true;
+        createTicketButton.textContent = "Готуємо PDF-білет…";
+        ticketStatus.textContent = "";
+        try {
+          const pdf = await createTicketPdf();
+          const url = URL.createObjectURL(pdf);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `kraplynky-level-${level}.pdf`;
+          link.style.display = "none";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          createdTicketFile = null;
+          shareTicketButton.hidden = true;
+          try {
+            if (typeof File !== "undefined" && typeof navigator.canShare === "function" && typeof navigator.share === "function") {
+              const shareableFile = new File([pdf], `kraplynky-level-${level}.pdf`, { type: "application/pdf" });
+              if (navigator.canShare({ files: [shareableFile] })) {
+                createdTicketFile = shareableFile;
+                shareTicketButton.hidden = false;
+              }
+            }
+          } catch { createdTicketFile = null; shareTicketButton.hidden = true; }
+          ticketStatus.textContent = "Білет готовий. PDF збережено як зображення, текст у ньому не виділяється.";
+        } catch {
+          ticketStatus.textContent = "Не вдалося створити PDF. Перезавантажте гру та спробуйте ще раз.";
+        } finally {
+          createTicketButton.disabled = false;
+          createTicketButton.textContent = "Завантажити PDF-білет";
+        }
+      }
+
+      async function shareTicket() {
+        if (!createdTicketFile || !navigator.share) return;
+        try {
+          await navigator.share({
+            files: [createdTicketFile],
+            title: "Мій ігровий квиток «Краплинки»",
+            text: `Мій результат: ${score.toLocaleString("uk-UA")} балів на рівні ${level}.`
+          });
+        } catch (error) {
+          if (error.name !== "AbortError") ticketStatus.textContent = "Не вдалося відкрити меню поширення. PDF уже завантажено на пристрій.";
+        }
+      }
+
       function showWin() {
         complete = true;
         clearHint();
         winTitle.textContent = `Рівень ${level} пройдено!`;
         winMessage.textContent = `Зібрано ${goal} краплинок групи ${target}. Рахунок: ${score.toLocaleString("uk-UA")}.`;
         donorWishElement.textContent = nextDonorWish();
+        ticketStatus.textContent = "";
+        createdTicketFile = null;
+        shareTicketButton.hidden = true;
         playAgainButton.textContent = "Наступний рівень";
         winOverlay.hidden = false;
-        playAgainButton.focus();
+        createTicketButton.focus();
       }
 
       async function resolveBoard() {
@@ -807,6 +1139,8 @@
 
       newGameButton.addEventListener("click", startNewGame);
       playAgainButton.addEventListener("click", advanceLevel);
+      createTicketButton.addEventListener("click", downloadTicket);
+      shareTicketButton.addEventListener("click", shareTicket);
       startNewGame();
     })();
   </script>
