@@ -147,6 +147,14 @@
       box-shadow: inset 0 0 0 2px #fff, 0 0 14px 4px #ffe279;
       animation: hint-pulse .8s ease-in-out 3;
     }
+    .tile.powerup-selected {
+      position: relative;
+      z-index: 2;
+      outline: 4px solid #fff;
+      outline-offset: -4px;
+      box-shadow: inset 0 0 0 3px #e9ad42, 0 0 15px 5px #ffe279;
+      transform: scale(.92);
+    }
     @keyframes hint-pulse {
       0%, 100% { transform: scale(1); filter: brightness(1); }
       50% { transform: scale(.9); filter: brightness(1.3); }
@@ -162,6 +170,76 @@
       100% { transform: translate(-50%, -50%) scale(1.65); opacity: 0; }
     }
     .tile:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+    .helper-panel {
+      position: absolute;
+      z-index: 4;
+      top: 12%;
+      bottom: 13%;
+      left: 1.2%;
+      width: 18.7%;
+      display: grid;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+    .helper-button {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: clamp(48px, 6vw, 82px) minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(5px, .65vw, 10px);
+      padding: clamp(5px, .7vw, 10px);
+      border: 1px solid #fff;
+      border-radius: 17px;
+      background: #fff8ebf2;
+      box-shadow: var(--shadow);
+      color: var(--wine);
+      text-align: left;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+    .helper-button:active:not(:disabled) { transform: scale(.97); }
+    .helper-button:disabled { opacity: .52; cursor: not-allowed; filter: saturate(.6); }
+    .helper-button.unaffordable { border-color: #eadbd2; }
+    .helper-button.armed { outline: 3px solid var(--gold); outline-offset: -3px; background: #fff0d2; }
+    .helper-icon { display: block; width: 100%; height: clamp(46px, 7.5vh, 84px); object-fit: contain; filter: drop-shadow(0 3px 4px #44101b35); }
+    .helper-copy { min-width: 0; display: grid; gap: 4px; }
+    .helper-name { color: #6c1525; font-size: clamp(10px, 1.08vw, 14px); font-weight: 1000; line-height: 1.12; }
+    .helper-price { color: #7b565b; font-size: clamp(10px, .92vw, 12px); font-weight: 900; white-space: nowrap; }
+    .intro-overlay {
+      position: absolute;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #310913c9;
+      backdrop-filter: blur(4px);
+    }
+    .intro-overlay[hidden] { display: none; }
+    .intro-card {
+      width: min(94%, 620px);
+      max-height: min(94dvh, 860px);
+      overflow: auto;
+      padding: clamp(18px, 3vw, 30px);
+      border: 2px solid #fff;
+      border-radius: 24px;
+      background: var(--cream);
+      box-shadow: 0 14px 44px #26000c66;
+    }
+    .intro-card h1 { margin: 0 0 8px; color: var(--wine); font-size: clamp(25px, 4vw, 36px); text-align: center; }
+    .intro-lead { margin: 0 0 12px; color: #725459; font-weight: 800; line-height: 1.4; text-align: center; }
+    .intro-rules { margin: 0 0 14px; padding-left: 23px; color: #54343a; font-size: 14px; font-weight: 700; line-height: 1.4; }
+    .intro-rules li + li { margin-top: 5px; }
+    .intro-card h2 { margin: 0 0 8px; color: var(--wine); font-size: 18px; }
+    .intro-power-list { display: grid; gap: 7px; margin: 0 0 10px; }
+    .intro-power { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 9px; padding: 6px 9px; border: 1px solid #efd9cf; border-radius: 13px; background: #fff5ed; }
+    .intro-power img { width: 46px; height: 46px; object-fit: contain; }
+    .intro-power strong { display: block; margin-bottom: 2px; color: #701526; font-size: 13px; }
+    .intro-power span { display: block; color: #725459; font-size: 12px; font-weight: 700; line-height: 1.25; }
+    .intro-note { margin: 0 0 12px; color: #88696d; font-size: 11px; font-weight: 700; text-align: center; }
+    .start-game { display: block; width: 100%; min-height: 48px; font-size: 16px; }
     .bottom-panel {
       position: absolute;
       z-index: 3;
@@ -357,8 +435,8 @@
       .progress-track { grid-column: 3; grid-row: 2; width: 100%; min-width: 62px; height: 9px; margin: 0; }
       .progress-count { grid-column: 3; grid-row: 3; margin: 0; font-size: 14px; }
       .board {
-        left: 50%; top: max(33%, calc(env(safe-area-inset-top) + 244px));
-        width: min(93.6%, 60dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 262px));
+        left: 50%; top: max(33dvh, calc(env(safe-area-inset-top) + 244px));
+        width: min(93.6%, 60dvh, calc(100dvh - max(33dvh, calc(env(safe-area-inset-top) + 244px)) - env(safe-area-inset-bottom) - 92px));
         height: auto; aspect-ratio: 1;
         transform: translateX(-50%);
         gap: .48%; padding: 1.1%; border-radius: 17px;
@@ -366,6 +444,37 @@
         box-shadow: inset 0 0 0 2px #f8ded4cc, 0 0 22px #e34245a8;
       }
       .tile { border-radius: 5px; }
+      .helper-panel {
+        top: auto;
+        bottom: max(4px, env(safe-area-inset-bottom));
+        left: 3%;
+        right: 3%;
+        width: auto;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-rows: 1fr;
+        gap: 5px;
+      }
+      .helper-button {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 38px auto;
+        justify-items: center;
+        gap: 1px;
+        padding: 3px 2px;
+        border-radius: 12px;
+        text-align: center;
+      }
+      .helper-icon { width: 42px; height: 38px; }
+      .helper-copy { justify-items: center; gap: 1px; }
+      .helper-name { font-size: clamp(8px, 2.55vw, 10px); line-height: 1.05; }
+      .helper-price { font-size: clamp(8px, 2.35vw, 10px); line-height: 1.05; }
+      .intro-overlay { padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+      .intro-card { width: 100%; max-height: 100%; padding: 16px; border-radius: 19px; }
+      .intro-rules { font-size: 13px; }
+      .intro-power { grid-template-columns: 42px minmax(0, 1fr); gap: 7px; padding: 5px 7px; }
+      .intro-power img { width: 40px; height: 40px; }
+      .intro-power strong { font-size: 12px; }
+      .intro-power span { font-size: 11px; }
+      .status { bottom: calc(env(safe-area-inset-bottom) + 96px); }
       .bottom-panel {
         position: static;
         left: auto; right: auto; bottom: auto; min-height: 0;
@@ -392,7 +501,11 @@
       .target-name { font-size: 20px; }
       .target-description { font-size: 9px; }
       .progress-track { min-width: 52px; }
-      .board { width: min(96%, 60dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 262px)); }
+      .board { width: min(96%, 60dvh, calc(100dvh - max(33dvh, calc(env(safe-area-inset-top) + 244px)) - env(safe-area-inset-bottom) - 92px)); }
+      .helper-panel { left: 2%; right: 2%; gap: 3px; }
+      .helper-icon { width: 36px; }
+      .helper-name { font-size: 8px; }
+      .helper-price { font-size: 8px; }
       .new-game { padding-inline: 7px; font-size: 10px; }
     }
     @media (max-height: 620px) and (orientation: landscape) {
@@ -431,7 +544,40 @@
       </div>
 
       <div class="board" id="board" role="grid" aria-label="Ігрове поле, 6 на 6"></div>
+      <aside class="helper-panel" aria-label="Чарівні допомоги">
+        <button class="helper-button" id="needleHelp" type="button" aria-label="Чарівна голочка — підказка за 200 балів">
+          <img class="helper-icon" src="assets/powerup-needle.webp" alt="">
+          <span class="helper-copy"><span class="helper-name">Чарівна голочка</span><span class="helper-price">200 балів</span></span>
+        </button>
+        <button class="helper-button" id="syringeHelp" type="button" aria-label="Чарівний шприц — довільний обмін за 2 000 балів" aria-pressed="false">
+          <img class="helper-icon" src="assets/powerup-syringe.webp" alt="">
+          <span class="helper-copy"><span class="helper-name">Чарівний шприц</span><span class="helper-price">2 000 балів</span></span>
+        </button>
+        <button class="helper-button" id="centrifugeHelp" type="button" aria-label="Чарівна центрифуга — групування крапель за 5 000 балів">
+          <img class="helper-icon" src="assets/powerup-centrifuge.webp" alt="">
+          <span class="helper-copy"><span class="helper-name">Чарівна центрифуга</span><span class="helper-price">5 000 балів</span></span>
+        </button>
+      </aside>
       <div class="status" id="status" role="status" aria-live="polite"></div>
+
+      <div class="intro-overlay" id="introOverlay">
+        <section class="intro-card" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+          <h1 id="introTitle">Як грати</h1>
+          <p class="intro-lead">Збирай краплинки, виконуй завдання рівня та набирай бали.</p>
+          <ol class="intro-rules">
+            <li>Обмінюй сусідні краплинки, щоб скласти лінію з 3 або більше однакових.</li>
+            <li>Збирай краплинки потрібної групи крові. З кожним рівнем ціль зростає на 10.</li>
+          </ol>
+          <h2>Чарівні допомоги</h2>
+          <div class="intro-power-list">
+            <div class="intro-power"><img src="assets/powerup-needle.webp" alt=""><div><strong>Голочка · 200 балів</strong><span>Одразу підсвічує один можливий хід.</span></div></div>
+            <div class="intro-power"><img src="assets/powerup-syringe.webp" alt=""><div><strong>Шприц · 2 000 балів</strong><span>Натисни допомогу й вибери дві будь-які різні краплинки.</span></div></div>
+            <div class="intro-power"><img src="assets/powerup-centrifuge.webp" alt=""><div><strong>Центрифуга · 5 000 балів</strong><span>Групує однакові краплинки; готові лінії одразу зникають і дають бали.</span></div></div>
+          </div>
+          <p class="intro-note">Допомоги оплачуються балами з твого рахунку. Шприц можна скасувати повторним натисканням до вибору обох краплинок.</p>
+          <button class="new-game start-game" id="startGame" type="button">Почати гру</button>
+        </section>
+      </div>
 
       <div class="win-overlay" id="winOverlay" hidden>
         <section class="win-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
@@ -517,6 +663,12 @@
       const createTicketButton = document.getElementById("createTicket");
       const shareTicketButton = document.getElementById("shareTicket");
       const ticketStatus = document.getElementById("ticketStatus");
+      const introOverlay = document.getElementById("introOverlay");
+      const startGameButton = document.getElementById("startGame");
+      const needleHelpButton = document.getElementById("needleHelp");
+      const syringeHelpButton = document.getElementById("syringeHelp");
+      const centrifugeHelpButton = document.getElementById("centrifugeHelp");
+      const powerupCosts = { needle: 200, syringe: 2000, centrifuge: 5000 };
       let cells = [];
       let level = 1;
       let target = types[0].id;
@@ -531,7 +683,11 @@
       let suppressClick = false;
       let statusTimer = 0;
       let hintTimer = 0;
+      let paidHintTimer = 0;
       let currentDifficulty = "standard";
+      let activePowerup = null;
+      let syringeFirst = null;
+      let gameStarted = false;
       let donorWishDeck = loadDonorWishDeck();
       let createdTicketFile = null;
 
@@ -651,6 +807,7 @@
           tile.className = "tile";
           tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
           if (selected === index && !busy) tile.classList.add("selected");
+          if (syringeFirst === index && activePowerup === "syringe") tile.classList.add("powerup-selected");
           if (clear.has(index)) tile.classList.add("clearing");
           tile.dataset.index = String(index);
           tile.setAttribute("role", "gridcell");
@@ -669,13 +826,15 @@
 
       function clearHint() {
         clearTimeout(hintTimer);
+        clearTimeout(paidHintTimer);
         hintTimer = 0;
+        paidHintTimer = 0;
         boardElement.querySelectorAll(".tile.hint").forEach(tile => tile.classList.remove("hint"));
       }
 
       function resetHintTimer() {
         clearHint();
-        if (busy || complete || !cells.length) return;
+        if (!gameStarted || busy || complete || activePowerup || !cells.length) return;
         hintTimer = setTimeout(() => {
           hintTimer = 0;
           if (busy || complete) return;
@@ -697,7 +856,19 @@
         progressTrack.setAttribute("aria-valuenow", String(Math.min(collected, goal)));
         scoreElement.textContent = score.toLocaleString("uk-UA");
         movesElement.textContent = String(moves);
-        newGameButton.disabled = busy;
+        newGameButton.disabled = busy || !gameStarted;
+        const helpState = [
+          [needleHelpButton, "needle"],
+          [syringeHelpButton, "syringe"],
+          [centrifugeHelpButton, "centrifuge"]
+        ];
+        for (const [button, key] of helpState) {
+          const armed = activePowerup === key;
+          button.disabled = !gameStarted || busy || complete || (activePowerup && !armed);
+          button.classList.toggle("unaffordable", score < powerupCosts[key] && !armed);
+          button.classList.toggle("armed", armed);
+          button.setAttribute("aria-pressed", String(armed));
+        }
         if (type) targetName.setAttribute("aria-label", `${type.alt}, група ${type.id}`);
       }
 
@@ -706,6 +877,87 @@
         statusElement.classList.add("visible");
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => statusElement.classList.remove("visible"), 1700);
+      }
+
+      function canBuyPowerup(key) {
+        if (score >= powerupCosts[key]) return true;
+        showStatus(`Для цієї допомоги потрібно ${powerupCosts[key].toLocaleString("uk-UA")} балів.`);
+        return false;
+      }
+
+      function useNeedle() {
+        if (!gameStarted || busy || complete || activePowerup) return;
+        if (!canBuyPowerup("needle")) return;
+        const move = findHintMove();
+        if (!move) {
+          showStatus("Підказки немає — поле буде перемішано після наступного ходу.");
+          return;
+        }
+        clearHint();
+        score -= powerupCosts.needle;
+        updateHud();
+        move.forEach(index => boardElement.children[index]?.classList.add("hint"));
+        showStatus("Голочка підсвітила можливий хід.");
+        paidHintTimer = setTimeout(() => {
+          paidHintTimer = 0;
+          boardElement.querySelectorAll(".tile.hint").forEach(tile => tile.classList.remove("hint"));
+          resetHintTimer();
+        }, 4500);
+      }
+
+      function toggleSyringe() {
+        if (!gameStarted || busy || complete) return;
+        if (activePowerup === "syringe") {
+          activePowerup = null;
+          syringeFirst = null;
+          renderBoard();
+          updateHud();
+          showStatus("Обмін скасовано — бали не списано.");
+          resetHintTimer();
+          return;
+        }
+        if (activePowerup || !canBuyPowerup("syringe")) return;
+        clearHint();
+        selected = null;
+        activePowerup = "syringe";
+        syringeFirst = null;
+        renderBoard();
+        updateHud();
+        showStatus("Обери першу краплинку для обміну.");
+      }
+
+      async function useSyringeSwap(first, second) {
+        if (busy || complete || first === second || score < powerupCosts.syringe) return;
+        clearHint();
+        activePowerup = null;
+        syringeFirst = null;
+        selected = null;
+        [cells[first], cells[second]] = [cells[second], cells[first]];
+        score -= powerupCosts.syringe;
+        moves++;
+        busy = true;
+        renderBoard();
+        updateHud();
+        showStatus("Шприц поміняв краплинки місцями.");
+        await wait(120);
+        await resolveBoard();
+      }
+
+      async function useCentrifuge() {
+        if (!gameStarted || busy || complete || activePowerup || !canBuyPowerup("centrifuge")) return;
+        clearHint();
+        selected = null;
+        const order = [target, ...types.map(type => type.id).filter(id => id !== target)];
+        const rank = new Map(order.map((id, index) => [id, index]));
+        cells.sort((first, second) => rank.get(first) - rank.get(second));
+        score -= powerupCosts.centrifuge;
+        moves++;
+        busy = true;
+        renderBoard();
+        updateHud();
+        showStatus("Центрифуга згрупувала однакові краплинки.");
+        await wait(250);
+        await resolveBoard();
       }
 
       function loadTicketImage(source) {
@@ -1055,8 +1307,23 @@
       }
 
       function selectTile(index) {
-        if (busy || complete) return;
+        if (!gameStarted || busy || complete) return;
         resetHintTimer();
+        if (activePowerup === "syringe") {
+          if (syringeFirst === null) {
+            syringeFirst = index;
+            renderBoard();
+            showStatus("Тепер обери другу, будь-яку іншу краплинку.");
+            return;
+          }
+          if (syringeFirst === index) {
+            showStatus("Потрібно вибрати дві різні краплинки.");
+            return;
+          }
+          useSyringeSwap(syringeFirst, index);
+          return;
+        }
+        if (activePowerup) return;
         if (selected === null || selected === index) {
           selected = selected === index ? null : index;
           renderBoard();
@@ -1077,7 +1344,7 @@
       });
       boardElement.addEventListener("pointerdown", event => {
         const tile = event.target.closest(".tile");
-        if (!tile || event.button !== 0 || busy || complete) return;
+        if (!tile || event.button !== 0 || !gameStarted || busy || complete || activePowerup) return;
         resetHintTimer();
         dragStart = { index: Number(tile.dataset.index), x: event.clientX, y: event.clientY, pointerId: event.pointerId };
       });
@@ -1098,7 +1365,7 @@
       });
       boardElement.addEventListener("pointercancel", () => { dragStart = null; });
       boardElement.addEventListener("keydown", event => {
-        if (selected === null || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        if (!gameStarted || activePowerup || selected === null || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
         event.preventDefault();
         const [row, col] = coords(selected);
         const next = {
@@ -1116,6 +1383,8 @@
         goal = level * 10;
         collected = 0;
         selected = null;
+        activePowerup = null;
+        syringeFirst = null;
         busy = false;
         complete = false;
         winOverlay.hidden = true;
@@ -1141,7 +1410,18 @@
       playAgainButton.addEventListener("click", advanceLevel);
       createTicketButton.addEventListener("click", downloadTicket);
       shareTicketButton.addEventListener("click", shareTicket);
+      needleHelpButton.addEventListener("click", useNeedle);
+      syringeHelpButton.addEventListener("click", toggleSyringe);
+      centrifugeHelpButton.addEventListener("click", useCentrifuge);
+      startGameButton.addEventListener("click", () => {
+        gameStarted = true;
+        introOverlay.hidden = true;
+        updateHud();
+        resetHintTimer();
+        boardElement.children[0]?.focus();
+      });
       startNewGame();
+      startGameButton.focus();
     })();
   </script>
 </body>
