@@ -2364,36 +2364,30 @@
         resetHintTimer();
         dragStart = { index: Number(tile.dataset.index), x: event.clientX, y: event.clientY, pointerId: event.pointerId };
       });
-      function elementAtBoardPoint(selector, x, y) {
-        const hit = document.elementFromPoint(x, y)?.closest(selector);
-        if (hit && boardElement.contains(hit)) return hit;
-        for (const candidate of boardElement.querySelectorAll(selector)) {
-          const rect = candidate.getBoundingClientRect();
-          if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return candidate;
-        }
-        return null;
-      }
-      document.addEventListener("pointerup", event => {
+      boardElement.addEventListener("pointerup", event => {
         if (!dragStart || dragStart.pointerId !== event.pointerId) return;
         const start = dragStart;
         dragStart = null;
         const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
         if (moved < 14) return;
-        suppressClick = true;
-        setTimeout(() => { suppressClick = false; }, 450);
-        const endHemocon = elementAtBoardPoint(".hemocon", event.clientX, event.clientY);
+        const endElement = document.elementFromPoint(event.clientX, event.clientY);
+        const endHemocon = endElement?.closest(".hemocon");
         if (endHemocon) {
+          suppressClick = true;
           transferDropToHemocon(start.index, Number(endHemocon.dataset.hemoconIndex));
+          setTimeout(() => { suppressClick = false; }, 450);
           return;
         }
-        const endTile = elementAtBoardPoint(".tile:not(.bandage):not(.blocked)", event.clientX, event.clientY);
+        const endTile = endElement?.closest(".tile");
         if (!endTile) return;
         const end = Number(endTile.dataset.index);
-        if (end !== start.index && isAdjacent(start.index, end)) swap(start.index, end);
+        if (isAdjacent(start.index, end)) {
+          suppressClick = true;
+          swap(start.index, end);
+          setTimeout(() => { suppressClick = false; }, 350);
+        }
       });
-      document.addEventListener("pointercancel", event => {
-        if (dragStart?.pointerId === event.pointerId) dragStart = null;
-      });
+      boardElement.addEventListener("pointercancel", () => { dragStart = null; });
       boardElement.addEventListener("keydown", event => {
         const hemocon = event.target.closest(".hemocon");
         if (hemocon && (event.key === "Enter" || event.key === " ")) {
