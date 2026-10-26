@@ -83,7 +83,11 @@
     .target-description { margin: 5px 0 0; font-size: clamp(10px, 1.2vw, 15px); font-weight: 800; color: #76565a; }
     .progress-track { grid-column: 1 / -1; height: 12px; margin-top: 15px; overflow: hidden; border-radius: 99px; background: #eeddda; box-shadow: inset 0 1px 3px #7b334533; }
     .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #c52b3a, #85172a); transition: width .22s ease; }
-    .progress-count { grid-column: 1 / -1; margin-top: 7px; text-align: right; font-size: clamp(15px, 1.65vw, 22px); font-weight: 1000; color: var(--wine); }
+    .progress-count { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-top: 7px; text-align: right; font-size: clamp(14px, 1.45vw, 20px); font-weight: 1000; color: var(--wine); }
+    .donor-charge { display: inline-flex; align-items: center; gap: 4px; color: #8a4e14; font-size: clamp(9px, .85vw, 12px); font-weight: 900; white-space: nowrap; }
+    .donor-charge-track { display: block; width: clamp(35px, 4vw, 58px); height: 7px; overflow: hidden; border-radius: 99px; background: #ead8c9; }
+    .donor-charge-fill { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f5c66c, #cf6a32); transition: width .25s ease; }
+    .instructions { text-wrap: balance; }
     .board {
       position: absolute;
       z-index: 1;
@@ -103,6 +107,7 @@
       user-select: none;
     }
     .tile {
+      position: relative;
       min-width: 0;
       min-height: 0;
       display: grid;
@@ -119,6 +124,7 @@
       user-select: none;
     }
     .tile img { display: block; width: 100%; height: 100%; border-radius: clamp(2px, .35vw, 5px); object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+    .tile:not(.bandage) > img:not(.special-emblem) { position: absolute; inset: 0; }
     .tile.selected { transform: scale(.92); box-shadow: inset 0 0 0 3px var(--gold), 0 0 13px #ffe279; filter: brightness(1.08); }
     .tile.clearing {
       position: relative;
@@ -142,6 +148,14 @@
     }
     .tile.falling { animation: drop-in .24s cubic-bezier(.2, .8, .25, 1) var(--fall-delay, 0ms) both; }
     .tile.blocked { border: 0; background: transparent; box-shadow: none; cursor: default; opacity: 0; pointer-events: none; }
+    .tile.bandage { position: relative; z-index: 1; padding: 2px; border: 2px solid #fff5; background: #fff3e5; box-shadow: inset 0 0 0 1px #fff; cursor: default; }
+    .tile.bandage img { width: 100%; height: 100%; object-fit: contain; }
+    .tile.bandage-clearing { animation: bandage-clear .38s ease-in both; }
+    .tile.special-drop { border-color: #ffe8a8; box-shadow: inset 0 0 0 1px #fff, 0 0 12px #ffd56899; }
+    .tile.special-wild { border-color: #fff; box-shadow: inset 0 0 0 2px #fff, 0 0 15px #f4a4d9aa; }
+    .tile .special-emblem { position: absolute; z-index: 2; right: 0; bottom: 0; width: 48%; height: 48%; object-fit: contain; border-radius: 50%; filter: drop-shadow(0 1px 2px #300614aa); }
+    .tile.special-wild .special-emblem { width: 58%; height: 58%; }
+    .tile.target-bonus { animation: target-bonus .5s cubic-bezier(.2, .8, .25, 1) both; }
     .tile.transferring { position: relative; z-index: 10; pointer-events: none; animation: drop-transfer .38s cubic-bezier(.2, .8, .25, 1) both; }
     .tile.shuffle-out { animation: shuffle-out .32s cubic-bezier(.5, 0, .7, .2) var(--shuffle-delay, 0ms) both; pointer-events: none; }
     .tile.shuffle-in { animation: shuffle-in .34s cubic-bezier(.2, .8, .25, 1) var(--shuffle-delay, 0ms) both; }
@@ -270,6 +284,16 @@
       18% { transform: scale(1.1); opacity: 1; filter: brightness(1.5); }
       100% { transform: scale(.32) rotate(-9deg); opacity: 0; filter: brightness(2); }
     }
+    @keyframes bandage-clear {
+      0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+      55% { transform: scale(1.18) rotate(8deg); opacity: .9; filter: brightness(1.7); }
+      100% { transform: scale(.4) rotate(-12deg); opacity: 0; filter: brightness(2); }
+    }
+    @keyframes target-bonus {
+      0% { transform: scale(.5); opacity: .2; filter: brightness(1.8); }
+      65% { transform: scale(1.13); opacity: 1; filter: brightness(1.35); }
+      100% { transform: scale(1); opacity: 1; filter: brightness(1); }
+    }
     @keyframes drop-in {
       0% { transform: translateY(-70%) scale(.72); opacity: .2; filter: brightness(1.6); }
       68% { transform: translateY(4%) scale(1.05); opacity: 1; filter: brightness(1.15); }
@@ -357,6 +381,12 @@
     .intro-power span { display: block; color: #725459; font-size: 12px; font-weight: 700; line-height: 1.25; }
     .intro-note { margin: 0 0 12px; color: #88696d; font-size: 11px; font-weight: 700; text-align: center; }
     .start-game { display: block; width: 100%; min-height: 48px; font-size: 16px; }
+    .intro-specials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+    .intro-special { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px; border: 1px solid #efd9cf; border-radius: 13px; background: #fff5ed; }
+    .intro-special img { width: 46px; height: 46px; object-fit: contain; }
+    .intro-special strong { display: block; color: #701526; font-size: 12px; line-height: 1.15; }
+    .intro-special span { display: block; margin-top: 2px; color: #725459; font-size: 10px; font-weight: 700; line-height: 1.25; }
+    .intro-core-note { margin: 0 0 12px; padding: 8px 10px; border-radius: 12px; background: #fff0e2; color: #725459; font-size: 12px; font-weight: 800; line-height: 1.35; }
     .hemocon-tutorial-overlay {
       position: absolute;
       z-index: 25;
@@ -385,6 +415,13 @@
     .hemocon-tutorial-copy p { margin: 0; }
     .hemocon-tutorial-copy strong { color: #781829; }
     .hemocon-tutorial-note { padding: 10px 12px; border: 1px solid #eed8cb; border-radius: 13px; background: #fff4e9; }
+    .feature-tutorial-visual { min-height: 96px; display: flex; align-items: center; justify-content: center; gap: 13px; margin: 12px auto; padding: 10px; border: 1px solid #efd9cf; border-radius: 16px; background: linear-gradient(135deg, #fff8ef, #f9e5dd); }
+    .feature-tutorial-visual img { width: clamp(58px, 13vw, 100px); height: clamp(58px, 13vw, 100px); object-fit: contain; }
+    .feature-tutorial-arrow { color: #a72b3d; font-size: clamp(24px, 5vw, 40px); font-weight: 1000; }
+    .feature-tutorial-badge { display: grid; justify-items: center; gap: 4px; padding: 11px 17px; border: 2px solid #e8c1a0; border-radius: 14px; background: #fffaf2; color: #8b2837; font-weight: 1000; }
+    .feature-tutorial-badge strong { font-size: clamp(20px, 4vw, 30px); }
+    .feature-tutorial-badge span { color: #76565a; font-size: 11px; }
+    .feature-dual-arrow { color: #a72b3d; font-size: 22px; font-weight: 1000; }
     .hemocon-demo-wrap { display: grid; justify-items: center; gap: 8px; }
     .hemocon-demo-board {
       position: relative;
@@ -443,6 +480,17 @@
       0%, 100% { box-shadow: inset 0 0 0 2px #fff8, 0 4px 12px #31101b55, 0 0 7px var(--hemocon-color); }
       50% { box-shadow: inset 0 0 0 3px #fff, 0 4px 14px #31101b66, 0 0 20px var(--hemocon-color); }
     }
+    .finale-overlay { position: absolute; z-index: 30; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 18px; background: #310913e6; backdrop-filter: blur(6px); }
+    .finale-overlay[hidden] { display: none; }
+    .finale-card { width: min(96%, 620px); max-height: min(96dvh, 900px); overflow-y: auto; padding: clamp(18px, 4vw, 32px); border: 2px solid #ffe5a9; border-radius: 26px; background: radial-gradient(circle at 50% 0, #fff7dc, var(--cream) 58%); box-shadow: 0 16px 55px #17040a88; text-align: center; }
+    .finale-card h1 { margin: 0 0 8px; color: var(--wine); font-size: clamp(27px, 5vw, 42px); }
+    .finale-card p { margin: 0 0 12px; color: #65434a; font-weight: 800; line-height: 1.45; }
+    .finale-trophy { display: block; width: clamp(150px, 33vw, 245px); height: clamp(150px, 33vw, 245px); margin: 0 auto 8px; object-fit: contain; filter: drop-shadow(0 8px 13px #6c27264a); animation: trophy-arrive .85s cubic-bezier(.2, .8, .25, 1) both; }
+    .finale-reminder { padding: 12px 15px; border: 1px solid #eed6bf; border-radius: 15px; background: #fff0e4; color: #7a2434 !important; }
+    .finale-score { color: #8a4e14 !important; font-size: 18px; font-weight: 1000 !important; }
+    .finale-card .new-game { display: block; width: 100%; margin-top: 10px; }
+    .finale-card .finale-secondary { background: linear-gradient(180deg, #fff, #f5e7dc); box-shadow: 0 4px 0 #9a6b5b; color: #701526; }
+    @keyframes trophy-arrive { 0% { transform: translateY(24px) scale(.7) rotate(-7deg); opacity: 0; } 70% { transform: translateY(-4px) scale(1.05) rotate(2deg); opacity: 1; } 100% { transform: translateY(0) scale(1) rotate(0); opacity: 1; } }
     .bottom-panel {
       position: absolute;
       z-index: 3;
@@ -464,6 +512,7 @@
     .stat-label { color: #98636a; font-size: clamp(9px, .85vw, 12px); font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
     .stat-value { color: var(--wine); font-size: clamp(17px, 2vw, 27px); line-height: 1.05; font-weight: 1000; }
     .instructions { margin: 0; color: #725459; font-size: clamp(10px, 1.12vw, 15px); font-weight: 700; line-height: 1.35; }
+    #missionInfo { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
     .new-game {
       min-height: 42px;
       padding: 9px 18px;
@@ -697,6 +746,10 @@
       .intro-rules { font-size: 13px; }
       .intro-power { grid-template-columns: 42px minmax(0, 1fr); gap: 7px; padding: 5px 7px; }
       .intro-power img { width: 40px; height: 40px; }
+      .intro-specials { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+      .intro-special { grid-template-columns: 42px minmax(0, 1fr); padding: 5px 7px; }
+      .intro-special img { width: 40px; height: 40px; }
+      .intro-special span { font-size: 10px; }
       .intro-power strong { font-size: 12px; }
       .intro-power span { font-size: 11px; }
       .status { bottom: calc(env(safe-area-inset-bottom) + 96px); }
@@ -759,12 +812,19 @@
           <h1 class="target-name" id="targetName">I+</h1>
           <p class="target-description">Збери краплинки цієї групи</p>
           <div class="progress-track" role="progressbar" id="progressTrack" aria-label="Прогрес завдання" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div>
-          <div class="progress-count" id="progressCount">0 / 10</div>
+          <div class="progress-count" aria-label="Прогрес рівня та заряд імпульсу">
+            <span id="progressCount">0 / 10</span>
+            <span class="donor-charge" aria-label="Заряд донорського імпульсу">
+              <span aria-hidden="true">⚡</span>
+              <span class="donor-charge-track" id="donorChargeTrack" role="progressbar" aria-label="Заряд донорського імпульсу" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><span class="donor-charge-fill" id="donorChargeFill"></span></span>
+              <span id="donorChargeCount">0/3</span>
+            </span>
+          </div>
         </section>
         <section class="bottom-panel" aria-label="Статистика та керування">
           <div class="stat"><span class="stat-label">Рахунок</span><strong class="stat-value" id="score">0</strong></div>
           <div class="stat"><span class="stat-label">Вдалі ходи</span><strong class="stat-value" id="moves">0</strong></div>
-          <p class="instructions">Краплинки добра · складай лінії з 3+ однакових краплинок.</p>
+          <p class="instructions" id="missionInfo">Бонусне завдання рівня.</p>
           <button class="new-game" id="newGame" type="button">Нова гра</button>
         </section>
       </div>
@@ -802,6 +862,11 @@
             <li>Збирай краплинки потрібної групи крові. З кожним рівнем ціль зростає на 10.</li>
             <li>Нові краплі можуть утворити лінію під час падіння — лови каскади й множник комбо!</li>
           </ol>
+          <div class="intro-specials" aria-label="Особливі краплі та донорський імпульс">
+            <div class="intro-special"><img src="assets/special-plasma.png" alt=""><div><strong>Лінія з 4: плазмова крапля</strong><span>Коли вона потрапить у наступний збіг, очистить свій ряд або стовпець.</span></div></div>
+            <div class="intro-special"><img src="assets/special-wild.png" alt=""><div><strong>Лінія з 5: універсальна крапля</strong><span>Під час обміну приймає групу сусідньої краплі й допомагає скласти збіг.</span></div></div>
+          </div>
+          <p class="intro-core-note">Каскади заряджають донорський імпульс ⚡. Коли шкала заповниться, з’явиться додаткова цільова крапля. На кожному рівні також є необов’язкова бонусна місія.</p>
           <h2>Чарівні допомоги</h2>
           <div class="intro-power-list">
             <div class="intro-power"><img src="assets/powerup-needle.webp" alt=""><div><strong>Голочка · 200 балів</strong><span>Одразу підсвічує один можливий хід.</span></div></div>
@@ -845,6 +910,16 @@
         </section>
       </div>
 
+      <div class="hemocon-tutorial-overlay" id="featureTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="featureTutorialTitle">
+          <h1 id="featureTutorialTitle"></h1>
+          <p class="hemocon-tutorial-lead" id="featureTutorialLead"></p>
+          <div class="feature-tutorial-visual" id="featureTutorialVisual"></div>
+          <div class="hemocon-tutorial-copy"><p id="featureTutorialCopy"></p></div>
+          <button class="new-game start-game" id="featureTutorialStart" type="button">Зрозуміло, граємо</button>
+        </section>
+      </div>
+
       <div class="win-overlay" id="winOverlay" hidden>
         <section class="win-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
           <h1 id="winTitle">Рівень виконано!</h1>
@@ -856,6 +931,19 @@
           <button class="ticket-button secondary" id="shareTicket" type="button" hidden>Поділитися квитком</button>
           <p class="ticket-status" id="ticketStatus" role="status" aria-live="polite"></p>
           <button class="new-game" id="playAgain" type="button">Наступний рівень</button>
+        </section>
+      </div>
+
+      <div class="finale-overlay" id="finaleOverlay" hidden>
+        <section class="finale-card" role="dialog" aria-modal="true" aria-labelledby="finaleTitle">
+          <img class="finale-trophy" src="assets/blood-cup-trophy.png" alt="Золотий кубок крові — нагорода за проходження десяти рівнів">
+          <h1 id="finaleTitle">Вітаємо з фіналом!</h1>
+          <p id="finaleScore" class="finale-score"></p>
+          <p>Ти пройшов десять рівнів «Краплинок добра» і довів, що наполегливість та турбота творять великі справи.</p>
+          <p class="finale-reminder">Донорська кров потрібна щодня. Полтавська обласна станція переливання крові чекає на тебе. Здавати кров важливо — твоя небайдужість може подарувати комусь надію.</p>
+          <p class="donor-wish" id="finaleWish"></p>
+          <button class="new-game" id="continueAfterFinal" type="button">Продовжити гру після 10-го рівня</button>
+          <button class="new-game finale-secondary" id="restartAfterFinal" type="button">Почати заново</button>
         </section>
       </div>
     </section>
@@ -900,6 +988,7 @@
       ];
       const donorWishStorageKey = "blood-group-game-wish-deck";
       const hemoconTutorialStorageKey = "blood-group-game-hemocon-tutorial-seen";
+      const featureTutorialStorageKey = "blood-group-game-feature-tutorials-seen";
       const types = [
         { id: "I+", name: "I+", image: "drop-i-plus.png", alt: "Перша позитивна", color: "#4fb9d4" },
         { id: "I−", name: "I−", image: "drop-i-minus.png", alt: "Перша негативна", color: "#9a72d7" },
@@ -917,6 +1006,9 @@
       const progressTrack = document.getElementById("progressTrack");
       const progressFill = document.getElementById("progressFill");
       const progressCount = document.getElementById("progressCount");
+      const donorChargeFill = document.getElementById("donorChargeFill");
+      const donorChargeCount = document.getElementById("donorChargeCount");
+      const donorChargeTrack = document.getElementById("donorChargeTrack");
       const targetKicker = document.getElementById("targetKicker");
       const scoreElement = document.getElementById("score");
       const movesElement = document.getElementById("moves");
@@ -938,16 +1030,41 @@
       const hemoconDemoBoard = document.getElementById("hemoconDemoBoard");
       const hemoconDemoBag = document.getElementById("hemoconDemoBag");
       const hemoconDemoGroup = document.getElementById("hemoconDemoGroup");
+      const featureTutorialOverlay = document.getElementById("featureTutorialOverlay");
+      const featureTutorialTitle = document.getElementById("featureTutorialTitle");
+      const featureTutorialLead = document.getElementById("featureTutorialLead");
+      const featureTutorialVisual = document.getElementById("featureTutorialVisual");
+      const featureTutorialCopy = document.getElementById("featureTutorialCopy");
+      const featureTutorialStartButton = document.getElementById("featureTutorialStart");
+      const finaleOverlay = document.getElementById("finaleOverlay");
+      const finaleScore = document.getElementById("finaleScore");
+      const finaleWish = document.getElementById("finaleWish");
+      const continueAfterFinalButton = document.getElementById("continueAfterFinal");
+      const restartAfterFinalButton = document.getElementById("restartAfterFinal");
+      const missionInfo = document.getElementById("missionInfo");
       const needleHelpButton = document.getElementById("needleHelp");
       const syringeHelpButton = document.getElementById("syringeHelp");
       const centrifugeHelpButton = document.getElementById("centrifugeHelp");
       const powerupCosts = { needle: 200, syringe: 2000, centrifuge: 5000 };
       let cells = [];
+      let specials = [];
       let hemocons = [];
+      let bandages = [];
       let level = 1;
       let target = types[0].id;
       let goal = 10;
       let collected = 0;
+      let levelGoal = 10;
+      let levelCollected = 0;
+      let targetStages = [types[0].id];
+      let stageGoals = [10];
+      let stageIndex = 0;
+      let comboCharge = 0;
+      let targetBonusIndex = -1;
+      let mission = null;
+      let currentMoveAnchor = null;
+      let featureTutorialsSeen = loadFeatureTutorialsSeen();
+      let pendingFeatureTutorial = null;
       let score = 0;
       let moves = 0;
       let selected = null;
@@ -979,6 +1096,12 @@
       function loadHemoconTutorialSeen() {
         try { return localStorage.getItem(hemoconTutorialStorageKey) === "yes"; }
         catch { return false; }
+      }
+      function loadFeatureTutorialsSeen() {
+        try {
+          const value = JSON.parse(localStorage.getItem(featureTutorialStorageKey));
+          return value && typeof value === "object" ? value : {};
+        } catch { return {}; }
       }
       function renderHemoconTutorialIllustration() {
         const demoType = types[0];
@@ -1025,6 +1148,8 @@
         return pool[Math.floor(Math.random() * pool.length)].id;
       }
       const coords = index => [Math.floor(index / size), index % size];
+      const isBandageCell = index => bandages.includes(index);
+      const isBlockedCell = index => isHemoconCell(index) || isBandageCell(index);
       const isHemoconCell = index => {
         const [row, col] = coords(index);
         return hemocons.some(item => row >= item.row && row < item.row + 2 && col >= item.col && col < item.col + 2);
@@ -1034,6 +1159,18 @@
         const [br, bc] = coords(b);
         return Math.abs(ar - br) + Math.abs(ac - bc) === 1;
       };
+      function findAdjacentBandages(indices) {
+        const found = new Set();
+        for (const index of indices) {
+          const [row, col] = coords(index);
+          for (const [nextRow, nextCol] of [[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]]) {
+            if (nextRow < 0 || nextRow >= size || nextCol < 0 || nextCol >= size) continue;
+            const candidate = nextRow * size + nextCol;
+            if (isBandageCell(candidate)) found.add(candidate);
+          }
+        }
+        return found;
+      }
 
       function spawnHemocons() {
         hemocons = [];
@@ -1045,6 +1182,149 @@
           fill: 0,
           complete: false
         });
+      }
+
+      function spawnBandages() {
+        bandages = [];
+        if (level < 4) return;
+        const count = level < 7 ? 1 : Math.min(3, 1 + Math.floor((level - 4) / 3));
+        const choices = Array.from({ length: size * size }, (_, index) => index)
+          .filter(index => !isHemoconCell(index) && coords(index)[0] > 0 && coords(index)[0] < size - 1);
+        for (let n = 0; n < count && choices.length; n++) {
+          const pick = Math.floor(Math.random() * choices.length);
+          bandages.push(choices.splice(pick, 1)[0]);
+        }
+      }
+
+      function makeLevelTargets() {
+        levelGoal = level * 10;
+        stageIndex = 0;
+        const usesOrder = level >= 7 && (level <= 8 || (level - 7) % 5 <= 1);
+        if (!usesOrder) {
+          targetStages = [randomTarget()];
+          stageGoals = [levelGoal];
+        } else {
+          const first = randomTarget();
+          const options = types.filter(type => type.id !== first);
+          const second = randomType(options);
+          targetStages = [first, second];
+          stageGoals = [Math.ceil(levelGoal / 2), Math.floor(levelGoal / 2)];
+        }
+        target = targetStages[0];
+        goal = stageGoals[0];
+        collected = 0;
+        levelCollected = 0;
+      }
+
+      function addTargetProgress(amount) {
+        if (stageIndex >= targetStages.length || amount <= 0) return;
+        const added = Math.min(amount, Math.max(0, goal - collected));
+        if (!added) return;
+        collected += added;
+        levelCollected += added;
+        progressMission({ type: "target-collected" }, added);
+        if (collected >= goal && stageIndex < targetStages.length - 1) {
+          stageIndex++;
+          target = targetStages[stageIndex];
+          goal = stageGoals[stageIndex];
+          collected = 0;
+          showStatus("Чудово! Тепер збирай групу " + target + ".");
+        }
+      }
+
+      function levelTargetsComplete() {
+        return stageIndex >= targetStages.length || levelCollected >= levelGoal;
+      }
+
+      const missionOptions = [
+        { id: "cascade", label: "Бонус: зроби каскад ×3 за один хід", goal: 1, reward: 450 },
+        { id: "special", label: "Бонус: створи особливу краплю", goal: 1, reward: 400 },
+        { id: "target", label: "Бонус: збери ще 8 цільових крапель", goal: 8, reward: 500 }
+      ];
+      function startMission() {
+        const options = level >= 9
+          ? [...missionOptions, { id: "urgent", label: "Термінове: 2 каскади за 12 ходів", goal: 2, reward: 900, movesLeft: 12 }]
+          : missionOptions;
+        const picked = options[Math.floor(Math.random() * options.length)];
+        mission = { ...picked, progress: 0, done: false, failed: false, targetStart: levelCollected };
+        updateMissionHud();
+      }
+      function updateMissionHud() {
+        if (!missionInfo || !mission) return;
+        if (mission.done) missionInfo.textContent = "Бонус виконано! +" + mission.reward.toLocaleString("uk-UA") + " балів";
+        else if (mission.failed) missionInfo.textContent = "Бонус не виконано цього разу — рівень триває.";
+        else if (mission.id === "urgent") missionInfo.textContent = mission.label + " · " + mission.progress + "/" + mission.goal + " · лишилося " + mission.movesLeft;
+        else missionInfo.textContent = mission.label + " · " + mission.progress + "/" + mission.goal;
+      }
+      function progressMission(event, amount = 1) {
+        if (!mission || mission.done || mission.failed) return;
+        if (mission.id === "cascade" && event.type === "cascade" && event.count >= 3) mission.progress = mission.goal;
+        else if (mission.id === "special" && event.type === "special-created") mission.progress += amount;
+        else if (mission.id === "target" && event.type === "target-collected") mission.progress += amount;
+        else if (mission.id === "urgent" && event.type === "cascade" && event.count > 1) mission.progress++;
+        if (mission.progress >= mission.goal) {
+          mission.done = true;
+          score += mission.reward;
+          showStatus("Бонусне завдання виконано! +" + mission.reward.toLocaleString("uk-UA") + " балів.");
+        }
+        updateMissionHud();
+      }
+      function countMissionMove() {
+        if (!mission || mission.id !== "urgent" || mission.done || mission.failed) return;
+        mission.movesLeft--;
+        if (mission.movesLeft < 0 && mission.progress < mission.goal) mission.failed = true;
+        updateMissionHud();
+      }
+
+      function configureFeatureTutorial(kind) {
+        const configs = {
+          bandage: {
+            title: "Нова механіка: медична пов’язка",
+            lead: "З 4-го рівня на полі можуть з’являтися пов’язки-завади.",
+            visual: '<img src="assets/bandage-obstacle.png" alt="Медична пов’язка"><span class="feature-tutorial-arrow">→</span><div class="feature-tutorial-badge"><strong>3+</strong><span>збери лінію поруч</span></div>',
+            copy: "Склади звичайну лінію щонайменше з трьох краплинок поруч із пов’язкою. Вона зникне, а звільнене місце знову заповниться краплинками. Пов’язка не блокує проходження рівня й не потребує окремої допомоги."
+          },
+          order: {
+            title: "Нова механіка: послідовність груп",
+            lead: "На цьому рівні ціль складається з двох груп — виконуй завдання по черзі.",
+            visual: '<img src="' + imageFor[targetStages[0]] + '" alt="Перша цільова група ' + targetStages[0] + '"><span class="feature-dual-arrow">→</span><img src="' + imageFor[targetStages[1]] + '" alt="Наступна цільова група ' + targetStages[1] + '">',
+            copy: "Спочатку збери краплі першої вказаної групи. Після цього ціль автоматично перемкнеться на другу групу. Загальна кількість крапель для рівня залишається тією самою; прогрес видно на спільній шкалі."
+          },
+          urgent: {
+            title: "Нова механіка: термінове завдання",
+            lead: "Починаючи з 9-го рівня, іноді з’являється коротка бонусна місія.",
+            visual: '<div class="feature-tutorial-badge"><strong>12 ходів</strong><span>для двох каскадів</span></div><span class="feature-tutorial-arrow">⚡</span><div class="feature-tutorial-badge"><strong>+бонус</strong><span>до рахунку</span></div>',
+            copy: "Виконай зазначене завдання, щоб отримати додаткові бали. Це необов’язкова ціль: якщо не встигнеш, основний рівень продовжиться без штрафу. У кожному рівні є окрема бонусна місія."
+          }
+        };
+        const config = configs[kind];
+        if (!config) return;
+        featureTutorialTitle.textContent = config.title;
+        featureTutorialLead.textContent = config.lead;
+        featureTutorialVisual.innerHTML = config.visual;
+        featureTutorialCopy.textContent = config.copy;
+        pendingFeatureTutorial = kind;
+        featureTutorialOverlay.hidden = false;
+        featureTutorialStartButton.focus();
+      }
+      function finishFeatureTutorial() {
+        if (featureTutorialOverlay.hidden) return;
+        featureTutorialOverlay.hidden = true;
+        if (pendingFeatureTutorial) {
+          featureTutorialsSeen[pendingFeatureTutorial] = true;
+          try { localStorage.setItem(featureTutorialStorageKey, JSON.stringify(featureTutorialsSeen)); } catch {}
+        }
+        const tutorial = pendingFeatureTutorial;
+        pendingFeatureTutorial = null;
+        if (tutorial === "bandage") {
+          spawnBandages();
+          makeBoard();
+        }
+        busy = false;
+        renderBoard();
+        updateHud();
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked):not(.bandage)")?.focus();
       }
 
       function getHemoconProjectionIndices(hemocon) {
@@ -1070,8 +1350,8 @@
         return col < hemocon.col ? hemocon.col - col : col - (hemocon.col + 1);
       }
 
-      function findMatches() {
-        const matched = new Set();
+      function findMatchRuns() {
+        const runs = [];
         for (let row = 0; row < size; row++) {
           let start = 0;
           for (let col = 1; col <= size; col++) {
@@ -1079,7 +1359,7 @@
             const previous = cells[row * size + col - 1];
             if (current !== previous) {
               if (previous && col - start >= 3) {
-                for (let x = start; x < col; x++) matched.add(row * size + x);
+                runs.push({ type: previous, axis: "row", indices: Array.from({ length: col - start }, (_, offset) => row * size + start + offset) });
               }
               start = col;
             }
@@ -1092,13 +1372,65 @@
             const previous = cells[(row - 1) * size + col];
             if (current !== previous) {
               if (previous && row - start >= 3) {
-                for (let y = start; y < row; y++) matched.add(y * size + col);
+                runs.push({ type: previous, axis: "col", indices: Array.from({ length: row - start }, (_, offset) => (start + offset) * size + col) });
               }
               start = row;
             }
           }
         }
+        return runs;
+      }
+
+      function findMatches() {
+        const matched = new Set();
+        for (const run of findMatchRuns()) for (const index of run.indices) matched.add(index);
         return matched;
+      }
+
+      function swapDrops(first, second) {
+        const firstType = cells[first];
+        const secondType = cells[second];
+        const firstSpecial = specials[first];
+        const secondSpecial = specials[second];
+        [cells[first], cells[second]] = [cells[second], cells[first]];
+        [specials[first], specials[second]] = [specials[second], specials[first]];
+        if (firstSpecial?.kind === "wild" && secondSpecial?.kind !== "wild") cells[second] = secondType;
+        if (secondSpecial?.kind === "wild" && firstSpecial?.kind !== "wild") cells[first] = firstType;
+        if (firstSpecial?.kind === "wild" && secondSpecial?.kind === "wild") {
+          cells[second] = secondType;
+          cells[first] = firstType;
+        }
+      }
+
+      function createSpecialForRun(run) {
+        if (run.indices.length < 4) return null;
+        const kind = run.indices.length >= 5 ? "wild" : "plasma";
+        const anchor = currentMoveAnchor?.find(index => run.indices.includes(index)) ?? run.indices[Math.floor(run.indices.length / 2)];
+        return { index: anchor, special: kind === "wild" ? { kind } : { kind, axis: run.axis } };
+      }
+
+      function collectSpecialEffects(matched) {
+        const cleared = new Set(matched);
+        const activated = new Set();
+        const queue = [...matched];
+        while (queue.length) {
+          const index = queue.pop();
+          if (activated.has(index)) continue;
+          activated.add(index);
+          const special = specials[index];
+          if (!special || special.kind !== "plasma") continue;
+          const [row, col] = coords(index);
+          const effectCells = special.axis === "col"
+            ? Array.from({ length: size }, (_, y) => y * size + col)
+            : Array.from({ length: size }, (_, x) => row * size + x);
+          for (const effectIndex of effectCells) {
+            if (cells[effectIndex] !== null && !cleared.has(effectIndex)) {
+              cleared.add(effectIndex);
+              queue.push(effectIndex);
+            }
+          }
+        }
+        return { cleared, activated };
       }
 
       function findHintMove() {
@@ -1109,9 +1441,12 @@
           if (index < size * (size - 1)) neighbors.push(index + size);
           for (const other of neighbors) {
             if (cells[other] === null) continue;
-            [cells[index], cells[other]] = [cells[other], cells[index]];
+            const firstType = cells[index], secondType = cells[other];
+            const firstSpecial = specials[index], secondSpecial = specials[other];
+            swapDrops(index, other);
             const possible = findMatches().size > 0;
-            [cells[index], cells[other]] = [cells[other], cells[index]];
+            cells[index] = firstType; cells[other] = secondType;
+            specials[index] = firstSpecial; specials[other] = secondSpecial;
             if (possible) return [index, other];
           }
         }
@@ -1156,12 +1491,12 @@
         for (let col = 0; col < size; col++) {
           let segmentStart = 0;
           while (segmentStart < size) {
-            if (isHemoconCell(segmentStart * size + col)) {
+            if (isBlockedCell(segmentStart * size + col)) {
               segmentStart++;
               continue;
             }
             let segmentEnd = segmentStart;
-            while (segmentEnd < size && !isHemoconCell(segmentEnd * size + col)) segmentEnd++;
+            while (segmentEnd < size && !isBlockedCell(segmentEnd * size + col)) segmentEnd++;
             let destination = segmentEnd - 1;
             for (let row = segmentEnd - 1; row >= segmentStart; row--) {
               const index = row * size + col;
@@ -1169,7 +1504,9 @@
                 const destinationIndex = destination * size + col;
                 if (destinationIndex !== index) {
                   cells[destinationIndex] = cells[index];
+                  specials[destinationIndex] = specials[index];
                   cells[index] = null;
+                  specials[index] = null;
                 }
                 destination--;
               }
@@ -1177,6 +1514,7 @@
             for (let row = destination; row >= segmentStart; row--) {
               const index = row * size + col;
               cells[index] = randomType();
+              specials[index] = null;
               refillCells.push(index);
             }
             segmentStart = segmentEnd;
@@ -1186,12 +1524,13 @@
       }
 
       function makeBoard() {
+        specials = Array(size * size).fill(null);
         for (let attempt = 0; attempt < 500; attempt++) {
           const next = [];
           for (let row = 0; row < size; row++) {
             for (let col = 0; col < size; col++) {
               const index = row * size + col;
-              if (isHemoconCell(index)) {
+              if (isBlockedCell(index)) {
                 next.push(null);
                 continue;
               }
@@ -1205,30 +1544,50 @@
           cells = next;
           if (hasPossibleMove()) return;
         }
-        cells = Array.from({ length: size * size }, (_, index) => isHemoconCell(index) ? null : types[(index + Math.floor(index / size)) % types.length].id);
+        cells = Array.from({ length: size * size }, (_, index) => isBlockedCell(index) ? null : types[(index + Math.floor(index / size)) % types.length].id);
+        specials = Array(size * size).fill(null);
       }
 
-      function renderBoard(clear = new Set(), falling = new Set()) {
+      function renderBoard(clear = new Set(), falling = new Set(), clearingBandages = new Set()) {
         const fragment = document.createDocumentFragment();
         const firstOpenCell = cells.findIndex(type => type !== null);
         cells.forEach((type, index) => {
           const tile = document.createElement("button");
           tile.type = "button";
           tile.className = "tile";
-          if (type === null) {
+          if (isBandageCell(index)) {
+            tile.classList.add("bandage");
+            if (clearingBandages.has(index)) tile.classList.add("bandage-clearing");
+            tile.disabled = true;
+            tile.setAttribute("aria-label", "Медична пов’язка-завада: очисть лінію поруч");
+            tile.tabIndex = -1;
+            const bandageImage = document.createElement("img");
+            bandageImage.src = "assets/bandage-obstacle.png";
+            bandageImage.alt = "";
+            tile.append(bandageImage);
+          } else if (type === null) {
             tile.classList.add("blocked");
             tile.disabled = true;
             tile.setAttribute("aria-label", "Клітинка зайнята гемоконом");
             tile.tabIndex = -1;
           } else {
             tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
-            tile.setAttribute("aria-label", `Краплинка ${type}, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
+            tile.setAttribute("aria-label", "Краплинка " + type + (specials[index]?.kind === "plasma" ? ", плазмова, очистить свій " + (specials[index].axis === "row" ? "ряд" : "стовпець") : specials[index]?.kind === "wild" ? ", універсальна" : "") + ", рядок " + (Math.floor(index / size) + 1) + ", стовпець " + (index % size + 1));
             tile.tabIndex = selected === null ? (index === firstOpenCell ? 0 : -1) : (selected === index ? 0 : -1);
             const image = document.createElement("img");
             image.src = imageFor[type];
-            image.alt = `Група ${type}`;
+            image.alt = "Група " + type;
             image.draggable = false;
             tile.append(image);
+            if (specials[index]) {
+              tile.classList.add(specials[index].kind === "wild" ? "special-wild" : "special-drop");
+              const emblem = document.createElement("img");
+              emblem.className = "special-emblem";
+              emblem.src = specials[index].kind === "wild" ? "assets/special-wild.png" : "assets/special-plasma.png";
+              emblem.alt = "";
+              tile.append(emblem);
+            }
+            if (targetBonusIndex === index) tile.classList.add("target-bonus");
           }
           if (selected === index && !busy) tile.classList.add("selected");
           if (syringeFirst === index && activePowerup === "syringe") tile.classList.add("powerup-selected");
@@ -1292,6 +1651,7 @@
         busy = true;
         selected = null;
         moves++;
+        countMissionMove();
         const source = boardElement.querySelector(`.tile[data-index="${dropIndex}"]`);
         const visual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
         if (source && visual && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1306,6 +1666,7 @@
         await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
 
         cells[dropIndex] = null;
+        specials[dropIndex] = null;
         hemocon.fill++;
         const liveVisual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
         if (liveVisual) {
@@ -1357,7 +1718,7 @@
         hemocon.ready = false;
         hemocon.complete = true;
         score += 1000;
-        if (hemocon.type === target) collected += 10;
+        if (hemocon.type === target) addTargetProgress(10);
         renderBoard();
         updateHud();
         showStatus(`Проєкції перетворено! +1 000 балів${hemocon.type === target ? " і +10 до цілі" : ""}.`);
@@ -1391,15 +1752,18 @@
 
       function updateHud() {
         const type = types.find(item => item.id === target);
-        targetKicker.textContent = `Рівень ${level} · ціль`;
+        targetKicker.textContent = "Рівень " + level + (targetStages.length > 1 ? " · група " + (stageIndex + 1) + "/" + targetStages.length : "") + " · ціль";
         targetDrop.src = imageFor[target];
         targetDrop.alt = `Краплинка групи ${target}`;
         targetDrop.style.setProperty("--drop-color", type.color);
         targetName.textContent = target;
-        progressCount.textContent = `${Math.min(collected, goal)} / ${goal}`;
-        progressFill.style.width = `${Math.min(100, collected / goal * 100)}%`;
-        progressTrack.setAttribute("aria-valuemax", String(goal));
-        progressTrack.setAttribute("aria-valuenow", String(Math.min(collected, goal)));
+        progressCount.textContent = Math.min(levelCollected, levelGoal) + " / " + levelGoal;
+        progressFill.style.width = Math.min(100, levelCollected / levelGoal * 100) + "%";
+        progressTrack.setAttribute("aria-valuemax", String(levelGoal));
+        progressTrack.setAttribute("aria-valuenow", String(Math.min(levelCollected, levelGoal)));
+        donorChargeFill.style.width = Math.min(100, comboCharge / 3 * 100) + "%";
+        donorChargeCount.textContent = comboCharge + "/3";
+        donorChargeTrack.setAttribute("aria-valuenow", String(comboCharge));
         scoreElement.textContent = score.toLocaleString("uk-UA");
         movesElement.textContent = String(moves);
         newGameButton.disabled = busy || !gameStarted;
@@ -1483,12 +1847,15 @@
       async function useSyringeSwap(first, second) {
         if (busy || complete || first === second || cells[first] === null || cells[second] === null || score < powerupCosts.syringe) return;
         clearHint();
+        currentMoveAnchor = null;
         activePowerup = null;
         syringeFirst = null;
         selected = null;
-        [cells[first], cells[second]] = [cells[second], cells[first]];
+        rememberMoveAnchor(first, second);
+        swapDrops(first, second);
         score -= powerupCosts.syringe;
         moves++;
+        countMissionMove();
         busy = true;
         renderBoard();
         updateHud();
@@ -1500,14 +1867,17 @@
       async function useCentrifuge() {
         if (!gameStarted || busy || complete || activePowerup || !canBuyPowerup("centrifuge")) return;
         clearHint();
+        currentMoveAnchor = null;
         selected = null;
         const order = [target, ...types.map(type => type.id).filter(id => id !== target)];
         const rank = new Map(order.map((id, index) => [id, index]));
         const openCells = cells.map((type, index) => type === null ? -1 : index).filter(index => index >= 0);
-        const drops = openCells.map(index => cells[index]).sort((first, second) => rank.get(first) - rank.get(second));
-        openCells.forEach((index, position) => { cells[index] = drops[position]; });
+        const drops = openCells.map(index => ({ type: cells[index], special: specials[index] }))
+          .sort((first, second) => rank.get(first.type) - rank.get(second.type));
+        openCells.forEach((index, position) => { cells[index] = drops[position].type; specials[index] = drops[position].special; });
         score -= powerupCosts.centrifuge;
         moves++;
+        countMissionMove();
         busy = true;
         renderBoard();
         updateHud();
@@ -1785,8 +2155,16 @@
       function showWin() {
         complete = true;
         clearHint();
-        winTitle.textContent = `Рівень ${level} пройдено!`;
-        winMessage.textContent = `Зібрано ${goal} краплинок групи ${target}. Рахунок: ${score.toLocaleString("uk-UA")}.`;
+        if (level === 10) {
+          winOverlay.hidden = true;
+          finaleScore.textContent = "Твій рахунок: " + score.toLocaleString("uk-UA") + " балів";
+          finaleWish.textContent = nextDonorWish();
+          finaleOverlay.hidden = false;
+          continueAfterFinalButton.focus();
+          return;
+        }
+        winTitle.textContent = "Рівень " + level + " пройдено!";
+        winMessage.textContent = "Зібрано " + levelGoal + " цільових краплинок. Рахунок: " + score.toLocaleString("uk-UA") + ".";
         donorWishElement.textContent = nextDonorWish();
         ticketStatus.textContent = "";
         createdTicketFile = null;
@@ -1803,7 +2181,7 @@
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         if (!reduceMotion) {
           boardElement.classList.add("shuffling");
-          boardElement.querySelectorAll(".tile:not(.blocked)").forEach(tile => {
+          boardElement.querySelectorAll(".tile:not(.blocked):not(.bandage)").forEach(tile => {
             const index = Number(tile.dataset.index);
             tile.style.setProperty("--shuffle-delay", `${Math.floor(index / size) * 18 + index % size * 6}ms`);
             tile.classList.add("shuffle-out");
@@ -1823,20 +2201,56 @@
 
       async function resolveBoard() {
         let cascade = 0;
+        let targetBonusGranted = false;
         while (cascade < 30) {
-          const matches = findMatches();
-          if (!matches.size) break;
+          const runs = findMatchRuns();
+          const matched = new Set();
+          for (const run of runs) for (const index of run.indices) matched.add(index);
+          if (!matched.size) {
+            if (!targetBonusGranted && comboCharge >= 3 && !levelTargetsComplete()) {
+              const candidates = cells.map((type, index) => type !== null && type !== target && !specials[index] ? index : -1).filter(index => index >= 0);
+              if (candidates.length) {
+                targetBonusGranted = true;
+                comboCharge = 0;
+                targetBonusIndex = candidates[Math.floor(Math.random() * candidates.length)];
+                cells[targetBonusIndex] = target;
+                renderBoard();
+                updateHud();
+                showStatus("Донорський імпульс додав на поле цільову краплинку!");
+                await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 420);
+                targetBonusIndex = -1;
+                continue;
+              }
+            }
+            break;
+          }
           cascade++;
-          const clearedTopRow = [...matches].some(index => index < size);
-          const targetMatches = [...matches].filter(index => cells[index] === target).length;
-          collected += targetMatches;
-          const matchPoints = matches.size * 60 * cascade;
+          comboCharge = Math.min(3, comboCharge + 1);
+          const effects = collectSpecialEffects(matched);
+          const specialCreation = runs.map(createSpecialForRun).filter(Boolean).sort((a, b) => b.special.kind === "wild" ? 1 : -1)[0];
+          const clearSet = new Set(effects.cleared);
+          if (specialCreation) {
+            clearSet.delete(specialCreation.index);
+            specials[specialCreation.index] = specialCreation.special;
+            progressMission({ type: "special-created" });
+          }
+          const clearedTopRow = [...effects.cleared].some(index => index < size);
+          const targetMatches = [...clearSet].filter(index => cells[index] === target).length;
+          addTargetProgress(targetMatches);
+          const activatedSpecials = [...effects.activated].filter(index => specials[index] && (!specialCreation || index !== specialCreation.index)).length;
+          const bandagesToClear = findAdjacentBandages(effects.cleared);
+          const matchPoints = (clearSet.size + activatedSpecials) * 60 * cascade + bandagesToClear.size * 200;
           score += matchPoints;
+          if (activatedSpecials) score += activatedSpecials * 120;
           showCombo(cascade, matchPoints);
           updateHud();
-          renderBoard(matches);
+          renderBoard(clearSet, new Set(), bandagesToClear);
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300);
-          for (const index of matches) cells[index] = null;
+          for (const index of clearSet) {
+            cells[index] = null;
+            specials[index] = null;
+          }
+          if (bandagesToClear.size) bandages = bandages.filter(index => !bandagesToClear.has(index));
           const refillCells = refillBoardColumns();
           if (!clearedTopRow) seedRefillMatch(refillCells);
           selected = null;
@@ -1847,10 +2261,17 @@
         const readyHemocon = hemocons.find(item => item.ready && !item.complete);
         if (readyHemocon) {
           await activateReadyHemocon(readyHemocon);
+          currentMoveAnchor = null;
           await resolveBoard();
           return;
         }
-        if (collected >= goal) {
+        progressMission({ type: "cascade", count: cascade });
+        if (mission?.id === "urgent" && mission.movesLeft <= 0 && !mission.done) {
+          mission.failed = true;
+          updateMissionHud();
+        }
+        currentMoveAnchor = null;
+        if (levelTargetsComplete()) {
           busy = false;
           renderBoard();
           updateHud();
@@ -1868,9 +2289,14 @@
         if (busy || complete || cells[first] === null || cells[second] === null || !isAdjacent(first, second)) return false;
         clearHint();
         selected = null;
-        [cells[first], cells[second]] = [cells[second], cells[first]];
+        const oldFirstType = cells[first], oldSecondType = cells[second];
+        const oldFirstSpecial = specials[first], oldSecondSpecial = specials[second];
+        rememberMoveAnchor(first, second);
+        swapDrops(first, second);
         if (!findMatches().size) {
-          [cells[first], cells[second]] = [cells[second], cells[first]];
+          cells[first] = oldFirstType; cells[second] = oldSecondType;
+          specials[first] = oldFirstSpecial; specials[second] = oldSecondSpecial;
+          currentMoveAnchor = null;
           renderBoard();
           showStatus("Обміняй краплинки так, щоб утворити лінію з трьох.");
           resetHintTimer();
@@ -1878,6 +2304,7 @@
         }
         busy = true;
         moves++;
+        countMissionMove();
         renderBoard();
         updateHud();
         await wait(90);
@@ -1982,18 +2409,26 @@
       });
 
       function startLevel() {
-        target = randomTarget();
+        makeLevelTargets();
         currentDifficulty = randomDifficulty();
-        goal = level * 10;
         const showHemoconTutorial = level === 3 && gameStarted && !hemoconTutorialSeen;
+        const tutorial = showHemoconTutorial ? "hemocon"
+          : level >= 4 && !featureTutorialsSeen.bandage ? "bandage"
+          : level >= 7 && !featureTutorialsSeen.order ? "order"
+          : level >= 9 && !featureTutorialsSeen.urgent ? "urgent"
+          : null;
         hemoconTutorialOverlay.hidden = true;
-        if (showHemoconTutorial) hemocons = [];
-        else spawnHemocons();
-        collected = 0;
+        featureTutorialOverlay.hidden = true;
+        finaleOverlay.hidden = true;
+        hemocons = [];
+        bandages = [];
+        if (tutorial !== "hemocon") spawnHemocons();
+        if (level >= 4 && tutorial !== "bandage") spawnBandages();
+        startMission();
         selected = null;
         activePowerup = null;
         syringeFirst = null;
-        busy = showHemoconTutorial;
+        busy = Boolean(tutorial);
         complete = false;
         winOverlay.hidden = true;
         makeBoard();
@@ -2003,6 +2438,8 @@
           renderHemoconTutorialIllustration();
           hemoconTutorialOverlay.hidden = false;
           hemoconTutorialStartButton.focus();
+        } else if (tutorial) {
+          configureFeatureTutorial(tutorial);
         } else if (gameStarted && hemocons.length) {
           showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
         }
@@ -2028,11 +2465,14 @@
         level = 1;
         score = 0;
         moves = 0;
+        comboCharge = 0;
+        currentMoveAnchor = null;
         startLevel();
       }
 
       function advanceLevel() {
         level++;
+        finaleOverlay.hidden = true;
         startLevel();
       }
 
@@ -2051,6 +2491,9 @@
         boardElement.querySelector(".tile:not(.blocked)")?.focus();
       });
       hemoconTutorialStartButton.addEventListener("click", finishHemoconTutorial);
+      featureTutorialStartButton.addEventListener("click", finishFeatureTutorial);
+      continueAfterFinalButton.addEventListener("click", advanceLevel);
+      restartAfterFinalButton.addEventListener("click", startNewGame);
       startNewGame();
       startGameButton.focus();
     })();
