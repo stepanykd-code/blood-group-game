@@ -356,6 +356,87 @@
     .intro-power span { display: block; color: #725459; font-size: 12px; font-weight: 700; line-height: 1.25; }
     .intro-note { margin: 0 0 12px; color: #88696d; font-size: 11px; font-weight: 700; text-align: center; }
     .start-game { display: block; width: 100%; min-height: 48px; font-size: 16px; }
+    .hemocon-tutorial-overlay {
+      position: absolute;
+      z-index: 25;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #310913dc;
+      backdrop-filter: blur(5px);
+    }
+    .hemocon-tutorial-overlay[hidden] { display: none; }
+    .hemocon-tutorial-card {
+      width: min(96%, 740px);
+      max-height: min(94dvh, 850px);
+      overflow-y: auto;
+      padding: clamp(16px, 3vw, 28px);
+      border: 2px solid #fff;
+      border-radius: 23px;
+      background: var(--cream);
+      box-shadow: 0 14px 44px #26000c80;
+    }
+    .hemocon-tutorial-card h1 { margin: 0 0 8px; color: var(--wine); font-size: clamp(23px, 4vw, 34px); text-align: center; }
+    .hemocon-tutorial-lead { margin: 0 0 14px; color: #725459; font-weight: 800; line-height: 1.4; text-align: center; }
+    .hemocon-tutorial-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .9fr); align-items: center; gap: clamp(12px, 2.5vw, 24px); }
+    .hemocon-tutorial-copy { display: grid; gap: 10px; color: #54343a; font-size: 14px; font-weight: 750; line-height: 1.42; }
+    .hemocon-tutorial-copy p { margin: 0; }
+    .hemocon-tutorial-copy strong { color: #781829; }
+    .hemocon-tutorial-note { padding: 10px 12px; border: 1px solid #eed8cb; border-radius: 13px; background: #fff4e9; }
+    .hemocon-demo-wrap { display: grid; justify-items: center; gap: 8px; }
+    .hemocon-demo-board {
+      position: relative;
+      width: min(100%, 290px);
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      gap: 3px;
+      padding: 5px;
+      border: 2px solid #e8bcc0;
+      border-radius: 16px;
+      background: #4a0913;
+      box-shadow: 0 8px 20px #45132235;
+      overflow: hidden;
+    }
+    .hemocon-demo-cell { min-width: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid #fff8; border-radius: 5px; background: var(--demo-drop-color, #fff); }
+    .hemocon-demo-cell img { width: 92%; height: 92%; object-fit: contain; }
+    .hemocon-demo-cell.remote-drop { position: relative; z-index: 2; outline: 2px solid #ffe279; outline-offset: -2px; box-shadow: 0 0 9px #ffe279; }
+    .hemocon-demo-arrows { position: absolute; z-index: 4; inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px); overflow: visible; pointer-events: none; }
+    .hemocon-demo-arrows path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .hemocon-drag-arrow { stroke: #ffe279; stroke-width: 2.8; stroke-dasharray: 4 2; animation: demo-dash 1s linear infinite; }
+    .hemocon-ray-arrow { stroke: #fff7f4; stroke-width: 1.6; stroke-dasharray: 2 2; opacity: .95; }
+    .hemocon-demo-bag {
+      position: absolute;
+      z-index: 3;
+      left: 33.3%;
+      top: 33.3%;
+      width: 33.4%;
+      height: 33.4%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 3px solid var(--demo-hemocon-color, #e1748e);
+      border-radius: 11px;
+      background: color-mix(in srgb, var(--demo-hemocon-color, #e1748e) 34%, white);
+      box-shadow: 0 0 11px color-mix(in srgb, var(--demo-hemocon-color, #e1748e) 65%, transparent), inset 0 0 0 1px #fff;
+    }
+    .hemocon-demo-bag img { width: 100%; height: 100%; object-fit: contain; }
+    .hemocon-demo-bag strong { position: absolute; z-index: 2; top: 44%; padding: 1px 4px; border-radius: 5px; background: #fffa; color: #701526; font-size: clamp(9px, 2.4vw, 14px); line-height: 1.1; text-shadow: 0 1px #fff; }
+    .hemocon-demo-caption { color: #76565a; font-size: 11px; font-weight: 900; text-align: center; }
+    @keyframes demo-dash { to { stroke-dashoffset: -12; } }
+    .tile.hemocon-transforming { position: relative; z-index: 2; animation: hemocon-ray-in .42s cubic-bezier(.2, .8, .25, 1) var(--projection-delay, 0ms) both; }
+    .hemocon.projecting { animation: hemocon-project .45s ease-in-out infinite; }
+    @keyframes hemocon-ray-in {
+      0% { transform: scale(.82); filter: brightness(1); }
+      55% { transform: scale(1.16); filter: brightness(1.75) drop-shadow(0 0 9px #fff); }
+      100% { transform: scale(1); filter: brightness(1.2); }
+    }
+    @keyframes hemocon-project {
+      0%, 100% { filter: brightness(1) drop-shadow(0 0 3px #fff); }
+      50% { filter: brightness(1.75) drop-shadow(0 0 14px #ffe279); transform: scale(1.07); }
+    }
     .bottom-panel {
       position: absolute;
       z-index: 3;
@@ -591,6 +672,16 @@
       .helper-price { font-size: clamp(8px, 2.35vw, 10px); line-height: 1.05; }
       .intro-overlay { padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
       .intro-card { width: 100%; max-height: 100%; padding: 16px; border-radius: 19px; }
+      .hemocon-tutorial-overlay { padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+      .hemocon-tutorial-card { width: 100%; max-height: 100%; padding: 15px; border-radius: 19px; }
+      .hemocon-tutorial-card h1 { font-size: clamp(21px, 6vw, 27px); }
+      .hemocon-tutorial-lead { margin-bottom: 9px; font-size: 13px; }
+      .hemocon-tutorial-layout { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+      .hemocon-tutorial-copy { grid-template-columns: 1fr 1fr; gap: 7px; font-size: 12px; }
+      .hemocon-tutorial-note { padding: 8px; }
+      .hemocon-demo-board { width: min(62vw, 230px); gap: 2px; padding: 4px; }
+      .hemocon-demo-arrows { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); }
+      .hemocon-demo-caption { font-size: 10px; }
       .intro-brand { gap: 8px; margin-bottom: 10px; }
       .intro-brand img { width: 52px; }
       .intro-brand-copy strong { font-size: clamp(18px, 5vw, 23px); }
@@ -633,6 +724,7 @@
       .helper-panel { left: 2%; right: 2%; gap: 3px; }
       .helper-icon { width: 36px; }
       .helper-name { font-size: 8px; }
+      .hemocon-tutorial-copy { grid-template-columns: minmax(0, 1fr); }
       .helper-price { font-size: 8px; }
       .new-game { padding-inline: 7px; font-size: 10px; }
     }
@@ -703,7 +795,6 @@
             <li>Обмінюй сусідні краплинки, щоб скласти лінію з 3 або більше однакових.</li>
             <li>Збирай краплинки потрібної групи крові. З кожним рівнем ціль зростає на 10.</li>
             <li>Нові краплі можуть утворити лінію під час падіння — лови каскади й множник комбо!</li>
-            <li>З рівня 3 на полі з’являється один гемокон розміром 2×2. Вибери краплю його групи й торкнися гемокона або перетягни краплю на нього. 10 крапель дають 1 000 балів, а цільовий гемокон додає 10 до прогресу.</li>
           </ol>
           <h2>Чарівні допомоги</h2>
           <div class="intro-power-list">
@@ -713,6 +804,38 @@
           </div>
           <p class="intro-note">Допомоги оплачуються балами з твого рахунку. Шприц можна скасувати повторним натисканням до вибору обох краплинок.</p>
           <button class="new-game start-game" id="startGame" type="button">Почати гру</button>
+        </section>
+      </div>
+
+      <div class="hemocon-tutorial-overlay" id="hemoconTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="hemoconTutorialTitle">
+          <h1 id="hemoconTutorialTitle">Нова механіка: гемокон</h1>
+          <p class="hemocon-tutorial-lead">Він з’явиться на полі з цього рівня. Подивись, як із ним взаємодіяти.</p>
+          <div class="hemocon-tutorial-layout">
+            <div class="hemocon-tutorial-copy">
+              <p><strong>1. Наповни:</strong> перенось у гемокон краплі тільки його групи. Можна перетягувати краплину <strong>з будь-якої клітинки поля — навіть несуміжної</strong>; або вибрати її дотиком і торкнутися гемокона.</p>
+              <p><strong>2. Дочекайся 10 крапель:</strong> повний гемокон перетворить краплі вздовж проєкцій <strong>угору, вниз, ліворуч і праворуч</strong> на краплі своєї групи — і тільки після цього зникне.</p>
+              <p class="hemocon-tutorial-note">За заповнений гемокон — 1 000 балів. Якщо його група цільова, ще й +10 до прогресу. На рівні гемокон лише один.</p>
+            </div>
+            <div class="hemocon-demo-wrap">
+              <div class="hemocon-demo-board" id="hemoconDemoBoard" role="img" aria-label="Ілюстрація: перетягування краплі з віддаленої клітинки до гемокона та перетворення крапель навколо нього у чотирьох напрямках">
+                <svg class="hemocon-demo-arrows" viewBox="0 0 100 100" aria-hidden="true">
+                  <defs>
+                    <marker id="demoDragHead" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5 Z" fill="#ffe279"></path></marker>
+                    <marker id="demoRayHead" markerWidth="4" markerHeight="4" refX="3.2" refY="2" orient="auto"><path d="M0 0 L4 2 L0 4 Z" fill="#fff7f4"></path></marker>
+                  </defs>
+                  <path class="hemocon-drag-arrow" d="M 10 10 C 20 15, 30 28, 43 43" marker-end="url(#demoDragHead)"></path>
+                  <path class="hemocon-ray-arrow" d="M50 32 L50 3 M50 68 L50 97 M32 50 L3 50 M68 50 L97 50" marker-end="url(#demoRayHead)"></path>
+                </svg>
+                <div class="hemocon-demo-bag" id="hemoconDemoBag">
+                  <img src="assets/hemocon-shell.png" alt="">
+                  <strong id="hemoconDemoGroup">I+</strong>
+                </div>
+              </div>
+              <div class="hemocon-demo-caption">Золота стрілка — перенесення з будь-якого місця. Світлі стрілки — чотири напрямки перетворення.</div>
+            </div>
+          </div>
+          <button class="new-game start-game" id="hemoconTutorialStart" type="button">Зрозуміло, граємо</button>
         </section>
       </div>
 
@@ -770,6 +893,7 @@
         "Нехай у вашому житті буде багато світла — ви щедро ділитеся ним з іншими."
       ];
       const donorWishStorageKey = "blood-group-game-wish-deck";
+      const hemoconTutorialStorageKey = "blood-group-game-hemocon-tutorial-seen";
       const types = [
         { id: "I+", name: "I+", image: "drop-i-plus.png", alt: "Перша позитивна", color: "#4fb9d4" },
         { id: "I−", name: "I−", image: "drop-i-minus.png", alt: "Перша негативна", color: "#9a72d7" },
@@ -803,6 +927,11 @@
       const ticketStatus = document.getElementById("ticketStatus");
       const introOverlay = document.getElementById("introOverlay");
       const startGameButton = document.getElementById("startGame");
+      const hemoconTutorialOverlay = document.getElementById("hemoconTutorialOverlay");
+      const hemoconTutorialStartButton = document.getElementById("hemoconTutorialStart");
+      const hemoconDemoBoard = document.getElementById("hemoconDemoBoard");
+      const hemoconDemoBag = document.getElementById("hemoconDemoBag");
+      const hemoconDemoGroup = document.getElementById("hemoconDemoGroup");
       const needleHelpButton = document.getElementById("needleHelp");
       const syringeHelpButton = document.getElementById("syringeHelp");
       const centrifugeHelpButton = document.getElementById("centrifugeHelp");
@@ -829,6 +958,7 @@
       let gameStarted = false;
       let donorWishDeck = loadDonorWishDeck();
       let createdTicketFile = null;
+      let hemoconTutorialSeen = loadHemoconTutorialSeen();
 
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
       const randomTarget = () => types[Math.floor(Math.random() * types.length)].id;
@@ -839,6 +969,31 @@
           if (Array.isArray(savedDeck) && savedDeck.every(index => Number.isInteger(index) && index >= 0 && index < donorWishes.length) && new Set(savedDeck).size === savedDeck.length) return savedDeck;
         } catch {}
         return [];
+      }
+      function loadHemoconTutorialSeen() {
+        try { return localStorage.getItem(hemoconTutorialStorageKey) === "yes"; }
+        catch { return false; }
+      }
+      function renderHemoconTutorialIllustration() {
+        const demoType = types[0];
+        hemoconDemoGroup.textContent = demoType.id;
+        hemoconDemoBag.style.setProperty("--demo-hemocon-color", demoType.color);
+        const arrows = hemoconDemoBoard.querySelector(".hemocon-demo-arrows");
+        const bag = hemoconDemoBoard.querySelector(".hemocon-demo-bag");
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < size * size; index++) {
+          const type = index === 0 ? demoType : types[(index * 3 + 1) % types.length];
+          const cell = document.createElement("div");
+          cell.className = `hemocon-demo-cell${index === 0 ? " remote-drop" : ""}`;
+          cell.style.setProperty("--demo-drop-color", type.color);
+          const drop = document.createElement("img");
+          drop.src = imageFor[type.id];
+          drop.alt = "";
+          cell.append(drop);
+          fragment.append(cell);
+        }
+        fragment.append(arrows, bag);
+        hemoconDemoBoard.replaceChildren(fragment);
       }
       function shuffledDonorWishDeck() {
         const deck = donorWishes.map((_, index) => index);
@@ -884,6 +1039,29 @@
           fill: 0,
           complete: false
         });
+      }
+
+      function getHemoconProjectionIndices(hemocon) {
+        const projected = [];
+        for (let row = 0; row < size; row++) {
+          for (let col = 0; col < size; col++) {
+            const verticalProjection = (col === hemocon.col || col === hemocon.col + 1)
+              && (row < hemocon.row || row >= hemocon.row + 2);
+            const horizontalProjection = (row === hemocon.row || row === hemocon.row + 1)
+              && (col < hemocon.col || col >= hemocon.col + 2);
+            const index = row * size + col;
+            if ((verticalProjection || horizontalProjection) && cells[index] !== null) projected.push(index);
+          }
+        }
+        return projected;
+      }
+
+      function hemoconProjectionDistance(index, hemocon) {
+        const [row, col] = coords(index);
+        if (col === hemocon.col || col === hemocon.col + 1) {
+          return row < hemocon.row ? hemocon.row - row : row - (hemocon.row + 1);
+        }
+        return col < hemocon.col ? hemocon.col - col : col - (hemocon.col + 1);
       }
 
       function findMatches() {
@@ -1133,13 +1311,29 @@
 
         const completed = hemocon.fill >= 10;
         if (completed) {
+          const projectedCells = getHemoconProjectionIndices(hemocon);
+          const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          let maxProjectionDelay = 0;
+          liveVisual?.classList.add("projecting");
+          for (const index of projectedCells) {
+            const tile = boardElement.querySelector(`.tile[data-index="${index}"]`);
+            if (!tile) continue;
+            const delay = hemoconProjectionDistance(index, hemocon) * 22;
+            maxProjectionDelay = Math.max(maxProjectionDelay, delay);
+            tile.style.setProperty("--projection-delay", `${delay}ms`);
+            tile.classList.add("hemocon-transforming");
+          }
+          showStatus("Гемокон перетворює свої проєкції у чотирьох напрямках…");
+          await wait(reduceMotion ? 0 : maxProjectionDelay + 440);
+
+          for (const index of projectedCells) cells[index] = hemocon.type;
           hemocon.complete = true;
           score += 1000;
           if (hemocon.type === target) collected += 10;
-          liveVisual?.classList.add("complete");
-          showStatus(`Гемокон наповнено! +1 000 балів${hemocon.type === target ? " і +10 до цілі" : ""}.`);
+          renderBoard();
           updateHud();
-          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
+          showStatus(`Проєкції перетворено! +1 000 балів${hemocon.type === target ? " і +10 до цілі" : ""}.`);
+          await wait(reduceMotion ? 0 : 340);
           hemocons = hemocons.filter(item => item !== hemocon);
         } else {
           showStatus(`Гемокон ${hemocon.type}: ${hemocon.fill} з 10 крапель.`);
@@ -1763,19 +1957,43 @@
         target = randomTarget();
         currentDifficulty = randomDifficulty();
         goal = level * 10;
-        spawnHemocons();
+        const showHemoconTutorial = level === 3 && gameStarted && !hemoconTutorialSeen;
+        hemoconTutorialOverlay.hidden = true;
+        if (showHemoconTutorial) hemocons = [];
+        else spawnHemocons();
         collected = 0;
         selected = null;
         activePowerup = null;
         syringeFirst = null;
-        busy = false;
+        busy = showHemoconTutorial;
         complete = false;
         winOverlay.hidden = true;
         makeBoard();
         renderBoard();
         updateHud();
-        if (gameStarted && hemocons.length) showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
+        if (showHemoconTutorial) {
+          renderHemoconTutorialIllustration();
+          hemoconTutorialOverlay.hidden = false;
+          hemoconTutorialStartButton.focus();
+        } else if (gameStarted && hemocons.length) {
+          showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
+        }
         resetHintTimer();
+      }
+
+      function finishHemoconTutorial() {
+        if (hemoconTutorialOverlay.hidden) return;
+        hemoconTutorialSeen = true;
+        try { localStorage.setItem(hemoconTutorialStorageKey, "yes"); } catch {}
+        hemoconTutorialOverlay.hidden = true;
+        spawnHemocons();
+        makeBoard();
+        busy = false;
+        renderBoard();
+        updateHud();
+        showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
       }
 
       function startNewGame() {
@@ -1804,6 +2022,7 @@
         resetHintTimer();
         boardElement.querySelector(".tile:not(.blocked)")?.focus();
       });
+      hemoconTutorialStartButton.addEventListener("click", finishHemoconTutorial);
       startNewGame();
       startGameButton.focus();
     })();
