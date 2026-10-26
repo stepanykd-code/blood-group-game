@@ -141,6 +141,77 @@
       animation: drop-ripple .28s ease-out both;
     }
     .tile.falling { animation: drop-in .24s cubic-bezier(.2, .8, .25, 1) var(--fall-delay, 0ms) both; }
+    .tile.blocked { border: 0; background: transparent; box-shadow: none; cursor: default; opacity: 0; pointer-events: none; }
+    .hemocon {
+      position: absolute;
+      z-index: 5;
+      inset: 0;
+      display: block;
+      min-width: 0;
+      min-height: 0;
+      overflow: visible;
+      pointer-events: none;
+      isolation: isolate;
+    }
+    .hemocon-fluid {
+      position: absolute;
+      z-index: 1;
+      left: 17%;
+      right: 18%;
+      bottom: 9%;
+      height: var(--fill-height, 0%);
+      max-height: 58%;
+      overflow: hidden;
+      border-radius: 18% 18% 30% 30% / 9% 9% 14% 14%;
+      background: linear-gradient(180deg, #fa5262 0%, #d51f38 28%, #a80d29 100%);
+      box-shadow: inset 0 4px 10px #ffb4ba55, 0 0 12px #d81c3866;
+      clip-path: polygon(6% 0, 94% 0, 100% 22%, 96% 78%, 84% 100%, 16% 100%, 4% 78%, 0 22%);
+      transition: height .48s cubic-bezier(.2, .8, .25, 1);
+    }
+    .hemocon-backing {
+      position: absolute;
+      z-index: 0;
+      left: 17%;
+      right: 18%;
+      top: 25%;
+      bottom: 9%;
+      background: linear-gradient(180deg, #eff9f7e8, #fffaf2ee);
+      clip-path: polygon(6% 0, 94% 0, 100% 22%, 96% 78%, 84% 100%, 16% 100%, 4% 78%, 0 22%);
+    }
+    .hemocon-fluid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -8%;
+      width: 116%;
+      height: 5px;
+      border-radius: 50%;
+      background: #ffd9dcaa;
+      box-shadow: 0 2px 7px #ffb4ba88;
+    }
+    .hemocon-shell { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .hemocon-label {
+      position: absolute;
+      z-index: 3;
+      top: 44%;
+      left: 28%;
+      width: 44%;
+      height: 26%;
+      display: grid;
+      place-content: center;
+      gap: 1px;
+      color: #701526;
+      text-align: center;
+      text-shadow: 0 1px 0 #fff;
+    }
+    .hemocon-label strong { font-size: clamp(12px, 1.2vw, 19px); line-height: 1; font-weight: 1000; }
+    .hemocon-label span { font-size: clamp(9px, .82vw, 12px); line-height: 1; font-weight: 900; }
+    .hemocon.complete { animation: hemocon-pop .32s cubic-bezier(.2, .8, .25, 1) both; }
+    @keyframes hemocon-pop {
+      0% { transform: scale(1); filter: brightness(1); }
+      45% { transform: scale(1.16); filter: brightness(1.8); }
+      100% { transform: scale(.2); opacity: 0; filter: brightness(2.2); }
+    }
     .tile.hint {
       position: relative;
       z-index: 2;
@@ -491,6 +562,8 @@
       .intro-brand img { width: 52px; }
       .intro-brand-copy strong { font-size: clamp(18px, 5vw, 23px); }
       .intro-brand-copy span { font-size: 10px; }
+      .hemocon-label strong { font-size: clamp(10px, 3vw, 14px); }
+      .hemocon-label span { font-size: clamp(8px, 2.2vw, 10px); }
       .intro-rules { font-size: 13px; }
       .intro-power { grid-template-columns: 42px minmax(0, 1fr); gap: 7px; padding: 5px 7px; }
       .intro-power img { width: 40px; height: 40px; }
@@ -597,6 +670,7 @@
             <li>Обмінюй сусідні краплинки, щоб скласти лінію з 3 або більше однакових.</li>
             <li>Збирай краплинки потрібної групи крові. З кожним рівнем ціль зростає на 10.</li>
             <li>Нові краплі можуть утворити лінію під час падіння — лови каскади й множник комбо!</li>
+            <li>З рівня 3 гемокони займають 2×2 клітинки. Лінії з крапель їхньої групи поруч наповнюють їх; 10 крапель дають 1 000 балів, а цільовий гемокон додає 10 до прогресу.</li>
           </ol>
           <h2>Чарівні допомоги</h2>
           <div class="intro-power-list">
@@ -628,8 +702,8 @@
     (() => {
       const size = 6;
       const targetDropChance = 0.30;
-      const refillMatchChances = { relaxed: 0.72, standard: 0.58, challenging: 0.44 };
-      const difficultyModes = Object.keys(refillMatchChances);
+      const refillAssistChances = { relaxed: 0.15, standard: 0.10, challenging: 0.05 };
+      const difficultyModes = Object.keys(refillAssistChances);
       const donorWishes = [
         "Дякуємо, що даруєте надію — ваша доброта має велику силу.",
         "Нехай добро, яким ви ділитеся, повертається до вас сторицею.",
@@ -701,6 +775,7 @@
       const centrifugeHelpButton = document.getElementById("centrifugeHelp");
       const powerupCosts = { needle: 200, syringe: 2000, centrifuge: 5000 };
       let cells = [];
+      let hemocons = [];
       let level = 1;
       let target = types[0].id;
       let goal = 10;
@@ -756,11 +831,64 @@
         return pool[Math.floor(Math.random() * pool.length)].id;
       }
       const coords = index => [Math.floor(index / size), index % size];
+      const isHemoconCell = index => {
+        const [row, col] = coords(index);
+        return hemocons.some(item => row >= item.row && row < item.row + 2 && col >= item.col && col < item.col + 2);
+      };
       const isAdjacent = (a, b) => {
         const [ar, ac] = coords(a);
         const [br, bc] = coords(b);
         return Math.abs(ar - br) + Math.abs(ac - bc) === 1;
       };
+
+      function spawnHemocons() {
+        hemocons = [];
+        if (level < 3) return;
+        const count = 1 + Math.floor(Math.random() * 3);
+        let attempts = 0;
+        while (hemocons.length < count && attempts < 600) {
+          attempts++;
+          const candidate = {
+            row: Math.floor(Math.random() * (size - 1)),
+            col: Math.floor(Math.random() * (size - 1)),
+            type: randomTarget(),
+            fill: 0,
+            complete: false
+          };
+          const overlaps = hemocons.some(item => candidate.row < item.row + 2 && candidate.row + 2 > item.row && candidate.col < item.col + 2 && candidate.col + 2 > item.col);
+          if (!overlaps) hemocons.push(candidate);
+        }
+        for (let row = 0; row < size - 1 && hemocons.length < count; row++) {
+          for (let col = 0; col < size - 1 && hemocons.length < count; col++) {
+            const overlaps = hemocons.some(item => row < item.row + 2 && row + 2 > item.row && col < item.col + 2 && col + 2 > item.col);
+            if (!overlaps) hemocons.push({ row, col, type: randomTarget(), fill: 0, complete: false });
+          }
+        }
+      }
+
+      function isNextToHemocon(index, hemocon) {
+        const [row, col] = coords(index);
+        return ((row === hemocon.row - 1 || row === hemocon.row + 2) && col >= hemocon.col && col < hemocon.col + 2)
+          || ((col === hemocon.col - 1 || col === hemocon.col + 2) && row >= hemocon.row && row < hemocon.row + 2);
+      }
+
+      function absorbMatchedDrops(matches) {
+        const completed = [];
+        for (const index of matches) {
+          const type = cells[index];
+          if (!type) continue;
+          const hemocon = hemocons.find(item => !item.complete && item.type === type && isNextToHemocon(index, item));
+          if (!hemocon) continue;
+          hemocon.fill++;
+          if (hemocon.fill === 10) {
+            hemocon.complete = true;
+            score += 1000;
+            if (hemocon.type === target) collected += 10;
+            completed.push(hemocon);
+          }
+        }
+        return completed;
+      }
 
       function findMatches() {
         const matched = new Set();
@@ -795,10 +923,12 @@
 
       function findHintMove() {
         for (let index = 0; index < cells.length; index++) {
+          if (cells[index] === null) continue;
           const neighbors = [];
           if (index % size < size - 1) neighbors.push(index + 1);
           if (index < size * (size - 1)) neighbors.push(index + size);
           for (const other of neighbors) {
+            if (cells[other] === null) continue;
             [cells[index], cells[other]] = [cells[other], cells[index]];
             const possible = findMatches().size > 0;
             [cells[index], cells[other]] = [cells[other], cells[index]];
@@ -812,16 +942,17 @@
         return findHintMove() !== null;
       }
 
-      function seedRefillMatch() {
-        if (Math.random() >= refillMatchChances[currentDifficulty]) return new Map();
+      function seedRefillMatch(refillCells) {
+        if (Math.random() >= refillAssistChances[currentDifficulty] || findMatches().size) return false;
+        const freshCells = new Set(refillCells);
         const candidates = [];
         const considerLine = indices => {
-          const empty = indices.filter(index => cells[index] === null);
-          if (!empty.length) return;
-          const existing = [...new Set(indices.map(index => cells[index]).filter(Boolean))];
-          if (existing.length > 1) return;
-          const type = existing[0] || (Math.random() < 0.72 ? target : types[Math.floor(Math.random() * types.length)].id);
-          candidates.push({ empty, type });
+          const fresh = indices.filter(index => freshCells.has(index));
+          const settled = indices.filter(index => !freshCells.has(index));
+          if (fresh.length !== 1 || settled.length !== 2) return;
+          const first = cells[settled[0]];
+          const second = cells[settled[1]];
+          if (first && first === second) candidates.push({ index: fresh[0], type: first });
         };
 
         for (let row = 0; row < size; row++) {
@@ -834,12 +965,10 @@
             considerLine([row * size + col, (row + 1) * size + col, (row + 2) * size + col]);
           }
         }
-        if (!candidates.length) return new Map();
-
-        const targetLines = candidates.filter(candidate => candidate.type === target);
-        const pool = targetLines.length && Math.random() < 0.7 ? targetLines : candidates;
-        const chosen = pool[Math.floor(Math.random() * pool.length)];
-        return new Map(chosen.empty.map(index => [index, chosen.type]));
+        if (!candidates.length) return false;
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        cells[chosen.index] = chosen.type;
+        return true;
       }
 
       function makeBoard() {
@@ -847,9 +976,14 @@
           const next = [];
           for (let row = 0; row < size; row++) {
             for (let col = 0; col < size; col++) {
+              const index = row * size + col;
+              if (isHemoconCell(index)) {
+                next.push(null);
+                continue;
+              }
               const excluded = new Set();
-              if (col >= 2 && next[row * size + col - 1] === next[row * size + col - 2]) excluded.add(next[row * size + col - 1]);
-              if (row >= 2 && next[(row - 1) * size + col] === next[(row - 2) * size + col]) excluded.add(next[(row - 1) * size + col]);
+              if (col >= 2 && next[index - 1] && next[index - 1] === next[index - 2]) excluded.add(next[index - 1]);
+              if (row >= 2 && next[index - size] && next[index - size] === next[index - size * 2]) excluded.add(next[index - size]);
               const choices = types.filter(type => !excluded.has(type.id));
               next.push(randomType(choices));
             }
@@ -857,16 +991,31 @@
           cells = next;
           if (hasPossibleMove()) return;
         }
-        cells = Array.from({ length: size * size }, (_, index) => types[(index + Math.floor(index / size)) % types.length].id);
+        cells = Array.from({ length: size * size }, (_, index) => isHemoconCell(index) ? null : types[(index + Math.floor(index / size)) % types.length].id);
       }
 
       function renderBoard(clear = new Set(), falling = new Set()) {
         const fragment = document.createDocumentFragment();
+        const firstOpenCell = cells.findIndex(type => type !== null);
         cells.forEach((type, index) => {
           const tile = document.createElement("button");
           tile.type = "button";
           tile.className = "tile";
-          tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
+          if (type === null) {
+            tile.classList.add("blocked");
+            tile.disabled = true;
+            tile.setAttribute("aria-label", "Клітинка зайнята гемоконом");
+            tile.tabIndex = -1;
+          } else {
+            tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
+            tile.setAttribute("aria-label", `Краплинка ${type}, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
+            tile.tabIndex = selected === null ? (index === firstOpenCell ? 0 : -1) : (selected === index ? 0 : -1);
+            const image = document.createElement("img");
+            image.src = imageFor[type];
+            image.alt = `Група ${type}`;
+            image.draggable = false;
+            tile.append(image);
+          }
           if (selected === index && !busy) tile.classList.add("selected");
           if (syringeFirst === index && activePowerup === "syringe") tile.classList.add("powerup-selected");
           if (clear.has(index)) tile.classList.add("clearing");
@@ -876,16 +1025,36 @@
           }
           tile.dataset.index = String(index);
           tile.setAttribute("role", "gridcell");
-          tile.setAttribute("aria-label", `Краплинка ${type}, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
           tile.setAttribute("aria-selected", String(selected === index));
-          tile.tabIndex = selected === null ? (index === 0 ? 0 : -1) : (selected === index ? 0 : -1);
-          const image = document.createElement("img");
-          image.src = imageFor[type];
-          image.alt = `Група ${type}`;
-          image.draggable = false;
-          tile.append(image);
           fragment.append(tile);
         });
+        for (const hemocon of hemocons) {
+          const visual = document.createElement("div");
+          visual.className = `hemocon${hemocon.complete ? " complete" : ""}`;
+          visual.style.gridColumn = `${hemocon.col + 1} / span 2`;
+          visual.style.gridRow = `${hemocon.row + 1} / span 2`;
+          visual.style.setProperty("--fill-height", `${hemocon.fill * 5.8}%`);
+          visual.setAttribute("role", "img");
+          visual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10`);
+
+          const backing = document.createElement("div");
+          backing.className = "hemocon-backing";
+          const fluid = document.createElement("div");
+          fluid.className = "hemocon-fluid";
+          const shell = document.createElement("img");
+          shell.className = "hemocon-shell";
+          shell.src = "assets/hemocon-shell.png";
+          shell.alt = "";
+          const label = document.createElement("div");
+          label.className = "hemocon-label";
+          const group = document.createElement("strong");
+          group.textContent = hemocon.type;
+          const count = document.createElement("span");
+          count.textContent = `${hemocon.fill} / 10`;
+          label.append(group, count);
+          visual.append(backing, fluid, shell, label);
+          fragment.append(visual);
+        }
         boardElement.replaceChildren(fragment);
       }
 
@@ -945,8 +1114,9 @@
         statusTimer = setTimeout(() => statusElement.classList.remove("visible"), 1700);
       }
 
-      function showCombo(cascade, points) {
-        statusElement.textContent = `${cascade > 1 ? `КОМБО ×${cascade}!` : "Є ЛІНІЯ!"} +${points.toLocaleString("uk-UA")} балів`;
+      function showCombo(cascade, points, hemoconCount = 0) {
+        const hemoconBonus = hemoconCount ? ` · гемокон +${(hemoconCount * 1000).toLocaleString("uk-UA")}` : "";
+        statusElement.textContent = `${cascade > 1 ? `КОМБО ×${cascade}!` : "Є ЛІНІЯ!"} +${points.toLocaleString("uk-UA")} балів${hemoconBonus}`;
         statusElement.classList.add("visible", "combo");
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => statusElement.classList.remove("visible", "combo"), 1300);
@@ -1000,7 +1170,7 @@
       }
 
       async function useSyringeSwap(first, second) {
-        if (busy || complete || first === second || score < powerupCosts.syringe) return;
+        if (busy || complete || first === second || cells[first] === null || cells[second] === null || score < powerupCosts.syringe) return;
         clearHint();
         activePowerup = null;
         syringeFirst = null;
@@ -1022,7 +1192,9 @@
         selected = null;
         const order = [target, ...types.map(type => type.id).filter(id => id !== target)];
         const rank = new Map(order.map((id, index) => [id, index]));
-        cells.sort((first, second) => rank.get(first) - rank.get(second));
+        const openCells = cells.map((type, index) => type === null ? -1 : index).filter(index => index >= 0);
+        const drops = openCells.map(index => cells[index]).sort((first, second) => rank.get(first) - rank.get(second));
+        openCells.forEach((index, position) => { cells[index] = drops[position]; });
         score -= powerupCosts.centrifuge;
         moves++;
         busy = true;
@@ -1319,34 +1491,49 @@
           const matches = findMatches();
           if (!matches.size) break;
           cascade++;
+          const clearedTopRow = [...matches].some(index => index < size);
+          const completedHemocons = absorbMatchedDrops(matches);
           const targetMatches = [...matches].filter(index => cells[index] === target).length;
           collected += targetMatches;
           const matchPoints = matches.size * 60 * cascade;
           score += matchPoints;
-          showCombo(cascade, matchPoints);
+          showCombo(cascade, matchPoints, completedHemocons.length);
           updateHud();
           renderBoard(matches);
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300);
           for (const index of matches) cells[index] = null;
+          if (completedHemocons.length) hemocons = hemocons.filter(item => !item.complete);
           const refillCells = [];
           for (let col = 0; col < size; col++) {
-            let destination = size - 1;
-            for (let row = size - 1; row >= 0; row--) {
-              const index = row * size + col;
-              if (cells[index] !== null) {
-                cells[destination * size + col] = cells[index];
-                if (destination !== row) cells[index] = null;
-                destination--;
+            let segmentStart = 0;
+            while (segmentStart < size) {
+              if (isHemoconCell(segmentStart * size + col)) {
+                segmentStart++;
+                continue;
               }
-            }
-            for (let row = destination; row >= 0; row--) {
-              const index = row * size + col;
-              cells[index] = null;
-              refillCells.push(index);
+              let segmentEnd = segmentStart;
+              while (segmentEnd < size && !isHemoconCell(segmentEnd * size + col)) segmentEnd++;
+              let destination = segmentEnd - 1;
+              for (let row = segmentEnd - 1; row >= segmentStart; row--) {
+                const index = row * size + col;
+                if (cells[index] !== null) {
+                  const destinationIndex = destination * size + col;
+                  if (destinationIndex !== index) {
+                    cells[destinationIndex] = cells[index];
+                    cells[index] = null;
+                  }
+                  destination--;
+                }
+              }
+              for (let row = destination; row >= segmentStart; row--) {
+                const index = row * size + col;
+                cells[index] = randomType();
+                refillCells.push(index);
+              }
+              segmentStart = segmentEnd;
             }
           }
-          const seededLine = seedRefillMatch();
-          for (const index of refillCells) cells[index] = seededLine.get(index) || randomType();
+          if (!clearedTopRow) seedRefillMatch(refillCells);
           selected = null;
           renderBoard(new Set(), new Set(refillCells));
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240);
@@ -1368,7 +1555,7 @@
       }
 
       async function swap(first, second) {
-        if (busy || complete || !isAdjacent(first, second)) return false;
+        if (busy || complete || cells[first] === null || cells[second] === null || !isAdjacent(first, second)) return false;
         clearHint();
         selected = null;
         [cells[first], cells[second]] = [cells[second], cells[first]];
@@ -1389,7 +1576,7 @@
       }
 
       function selectTile(index) {
-        if (!gameStarted || busy || complete) return;
+        if (!gameStarted || busy || complete || cells[index] === null) return;
         resetHintTimer();
         if (activePowerup === "syringe") {
           if (syringeFirst === null) {
@@ -1426,7 +1613,7 @@
       });
       boardElement.addEventListener("pointerdown", event => {
         const tile = event.target.closest(".tile");
-        if (!tile || event.button !== 0 || !gameStarted || busy || complete || activePowerup) return;
+        if (!tile || event.button !== 0 || !gameStarted || busy || complete || activePowerup || cells[Number(tile.dataset.index)] === null) return;
         resetHintTimer();
         dragStart = { index: Number(tile.dataset.index), x: event.clientX, y: event.clientY, pointerId: event.pointerId };
       });
@@ -1463,6 +1650,7 @@
         target = randomTarget();
         currentDifficulty = randomDifficulty();
         goal = level * 10;
+        spawnHemocons();
         collected = 0;
         selected = null;
         activePowerup = null;
@@ -1473,6 +1661,7 @@
         makeBoard();
         renderBoard();
         updateHud();
+        if (gameStarted && hemocons.length) showStatus(`Гемокони на полі: ${hemocons.length}. Шукай поруч лінії їхньої групи.`);
         resetHintTimer();
       }
 
@@ -1500,7 +1689,7 @@
         introOverlay.hidden = true;
         updateHud();
         resetHintTimer();
-        boardElement.children[0]?.focus();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
       });
       startNewGame();
       startGameButton.focus();
