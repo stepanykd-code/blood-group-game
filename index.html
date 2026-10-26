@@ -344,7 +344,8 @@
     .intro-brand img { display: block; width: clamp(54px, 8vw, 76px); aspect-ratio: 1; padding: 3px; border: 2px solid #fff; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px #31101b25; object-fit: contain; }
     .intro-brand-copy { display: grid; gap: 3px; text-align: left; }
     .intro-brand-copy span { color: #88676b; font-size: clamp(10px, 1.5vw, 13px); font-weight: 800; }
-    .intro-brand-copy strong { color: var(--wine); font-size: clamp(20px, 3.5vw, 29px); line-height: 1.05; }
+    .intro-brand-copy strong { display: flex; align-items: center; gap: .1em; color: var(--wine); font-size: clamp(20px, 3.5vw, 29px); line-height: 1.05; }
+    .intro-blood-drop { font-size: .78em; filter: drop-shadow(0 2px 2px #7b172644); }
     .intro-lead { margin: 0 0 12px; color: #725459; font-weight: 800; line-height: 1.4; text-align: center; }
     .intro-rules { margin: 0 0 14px; padding-left: 23px; color: #54343a; font-size: 14px; font-weight: 700; line-height: 1.4; }
     .intro-rules li + li { margin-top: 5px; }
@@ -428,6 +429,7 @@
     @keyframes demo-dash { to { stroke-dashoffset: -12; } }
     .tile.hemocon-transforming { position: relative; z-index: 2; animation: hemocon-ray-in .42s cubic-bezier(.2, .8, .25, 1) var(--projection-delay, 0ms) both; }
     .hemocon.projecting { animation: hemocon-project .45s ease-in-out infinite; }
+    .hemocon.ready:not(.projecting) { animation: hemocon-ready .95s ease-in-out infinite; }
     @keyframes hemocon-ray-in {
       0% { transform: scale(.82); filter: brightness(1); }
       55% { transform: scale(1.16); filter: brightness(1.75) drop-shadow(0 0 9px #fff); }
@@ -436,6 +438,10 @@
     @keyframes hemocon-project {
       0%, 100% { filter: brightness(1) drop-shadow(0 0 3px #fff); }
       50% { filter: brightness(1.75) drop-shadow(0 0 14px #ffe279); transform: scale(1.07); }
+    }
+    @keyframes hemocon-ready {
+      0%, 100% { box-shadow: inset 0 0 0 2px #fff8, 0 4px 12px #31101b55, 0 0 7px var(--hemocon-color); }
+      50% { box-shadow: inset 0 0 0 3px #fff, 0 4px 14px #31101b66, 0 0 20px var(--hemocon-color); }
     }
     .bottom-panel {
       position: absolute;
@@ -785,8 +791,8 @@
           <div class="intro-brand">
             <img src="assets/station-logo.png" alt="Логотип Полтавської обласної станції переливання крові">
             <div class="intro-brand-copy">
-              <span>Гра Полтавської обласної станції переливання крові</span>
-              <strong>Краплинки добра</strong>
+              <span>Гра "Полтавської обласної станції переливання крові"</span>
+              <strong><span class="intro-blood-drop" aria-hidden="true">🩸</span> Краплинки добра <span class="intro-blood-drop" aria-hidden="true">🩸</span></strong>
             </div>
           </div>
           <h1 id="introTitle">Як грати</h1>
@@ -814,7 +820,7 @@
           <div class="hemocon-tutorial-layout">
             <div class="hemocon-tutorial-copy">
               <p><strong>1. Наповни:</strong> перенось у гемокон краплі тільки його групи. Можна перетягувати краплину <strong>з будь-якої клітинки поля — навіть несуміжної</strong>; або вибрати її дотиком і торкнутися гемокона.</p>
-              <p><strong>2. Дочекайся 10 крапель:</strong> повний гемокон перетворить краплі вздовж проєкцій <strong>угору, вниз, ліворуч і праворуч</strong> на краплі своєї групи — і тільки після цього зникне.</p>
+              <p><strong>2. Дочекайся 10 крапель:</strong> заповнений гемокон спочатку дочекається завершення всіх поточних ліній, падіння та каскадів. Потім перетворить краплі вздовж проєкцій <strong>угору, вниз, ліворуч і праворуч</strong> на краплі своєї групи — і тільки після цього зникне.</p>
               <p class="hemocon-tutorial-note">За заповнений гемокон — 1 000 балів. Якщо його група цільова, ще й +10 до прогресу. На рівні гемокон лише один.</p>
             </div>
             <div class="hemocon-demo-wrap">
@@ -1242,7 +1248,7 @@
         });
         for (const hemocon of hemocons) {
           const visual = document.createElement("div");
-          visual.className = `hemocon${hemocon.complete ? " complete" : ""}`;
+          visual.className = `hemocon${hemocon.ready ? " ready" : ""}${hemocon.complete ? " complete" : ""}`;
           if (!busy && selected !== null && cells[selected] === hemocon.type) visual.classList.add("accepting");
           visual.style.gridColumn = `${hemocon.col + 1} / span 2`;
           visual.style.gridRow = `${hemocon.row + 1} / span 2`;
@@ -1251,7 +1257,7 @@
           visual.dataset.hemoconIndex = String(hemocons.indexOf(hemocon));
           visual.setAttribute("role", "button");
           visual.tabIndex = busy || complete || activePowerup ? -1 : 0;
-          visual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10`);
+          visual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10${hemocon.ready ? ", очікує завершення каскадів" : ""}`);
 
           const backing = document.createElement("div");
           backing.className = "hemocon-backing";
@@ -1311,30 +1317,11 @@
 
         const completed = hemocon.fill >= 10;
         if (completed) {
-          const projectedCells = getHemoconProjectionIndices(hemocon);
-          const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          let maxProjectionDelay = 0;
-          liveVisual?.classList.add("projecting");
-          for (const index of projectedCells) {
-            const tile = boardElement.querySelector(`.tile[data-index="${index}"]`);
-            if (!tile) continue;
-            const delay = hemoconProjectionDistance(index, hemocon) * 22;
-            maxProjectionDelay = Math.max(maxProjectionDelay, delay);
-            tile.style.setProperty("--projection-delay", `${delay}ms`);
-            tile.classList.add("hemocon-transforming");
-          }
-          showStatus("Гемокон перетворює свої проєкції у чотирьох напрямках…");
-          await wait(reduceMotion ? 0 : maxProjectionDelay + 440);
-
-          for (const index of projectedCells) cells[index] = hemocon.type;
-          hemocon.complete = true;
-          score += 1000;
-          if (hemocon.type === target) collected += 10;
-          renderBoard();
-          updateHud();
-          showStatus(`Проєкції перетворено! +1 000 балів${hemocon.type === target ? " і +10 до цілі" : ""}.`);
-          await wait(reduceMotion ? 0 : 340);
-          hemocons = hemocons.filter(item => item !== hemocon);
+          hemocon.ready = true;
+          liveVisual?.classList.add("ready");
+          liveVisual?.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на 10 з 10, очікує завершення каскадів`);
+          showStatus("Гемокон заповнений — дочекайся завершення всіх каскадів.");
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
         } else {
           showStatus(`Гемокон ${hemocon.type}: ${hemocon.fill} з 10 крапель.`);
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
@@ -1344,8 +1331,43 @@
         selected = null;
         renderBoard(new Set(), new Set(refillCells));
         updateHud();
-        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240);
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
         await resolveBoard();
+      }
+
+      async function activateReadyHemocon(hemocon) {
+        const projectedCells = getHemoconProjectionIndices(hemocon);
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const hemoconIndex = hemocons.indexOf(hemocon);
+        const liveVisual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
+        let maxProjectionDelay = 0;
+        liveVisual?.classList.add("projecting");
+        for (const index of projectedCells) {
+          const tile = boardElement.querySelector(`.tile[data-index="${index}"]`);
+          if (!tile) continue;
+          const delay = hemoconProjectionDistance(index, hemocon) * 22;
+          maxProjectionDelay = Math.max(maxProjectionDelay, delay);
+          tile.style.setProperty("--projection-delay", `${delay}ms`);
+          tile.classList.add("hemocon-transforming");
+        }
+        showStatus("Усі каскади завершено — гемокон перетворює проєкції!");
+        await wait(reduceMotion ? 0 : maxProjectionDelay + 440);
+
+        for (const index of projectedCells) cells[index] = hemocon.type;
+        hemocon.ready = false;
+        hemocon.complete = true;
+        score += 1000;
+        if (hemocon.type === target) collected += 10;
+        renderBoard();
+        updateHud();
+        showStatus(`Проєкції перетворено! +1 000 балів${hemocon.type === target ? " і +10 до цілі" : ""}.`);
+        await wait(reduceMotion ? 0 : 340);
+
+        hemocons = hemocons.filter(item => item !== hemocon);
+        const refillCells = refillBoardColumns();
+        renderBoard(new Set(), new Set(refillCells));
+        updateHud();
+        await wait(reduceMotion ? 0 : 340);
       }
 
       function clearHint() {
@@ -1819,9 +1841,15 @@
           if (!clearedTopRow) seedRefillMatch(refillCells);
           selected = null;
           renderBoard(new Set(), new Set(refillCells));
-          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240);
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
         }
         if (cascade >= 30) makeBoard();
+        const readyHemocon = hemocons.find(item => item.ready && !item.complete);
+        if (readyHemocon) {
+          await activateReadyHemocon(readyHemocon);
+          await resolveBoard();
+          return;
+        }
         if (collected >= goal) {
           busy = false;
           renderBoard();
