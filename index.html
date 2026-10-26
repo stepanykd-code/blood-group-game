@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#6b1421">
-  <title>Краплинки</title>
+  <meta name="description" content="Гра «Краплинки добра» Полтавської обласної станції переливання крові.">
+  <title>Краплинки добра — гра про групи крові</title>
   <style>
     :root {
       color-scheme: light;
@@ -77,12 +78,34 @@
       box-shadow: var(--shadow);
     }
     .target-kicker { grid-column: 1 / -1; margin: 0 0 5px; font-size: clamp(10px, 1vw, 14px); font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: #98636a; }
-    .target-drop { grid-row: 2 / 4; width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 13px; }
+    .target-drop { grid-row: 2 / 4; width: 100%; aspect-ratio: 1; object-fit: contain; border: 3px solid var(--drop-color, #fff); border-radius: 13px; }
     .target-name { margin: 0; font-size: clamp(22px, 3vw, 40px); line-height: 1; font-weight: 1000; color: var(--wine); }
     .target-description { margin: 5px 0 0; font-size: clamp(10px, 1.2vw, 15px); font-weight: 800; color: #76565a; }
     .progress-track { grid-column: 1 / -1; height: 12px; margin-top: 15px; overflow: hidden; border-radius: 99px; background: #eeddda; box-shadow: inset 0 1px 3px #7b334533; }
     .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #c52b3a, #85172a); transition: width .22s ease; }
     .progress-count { grid-column: 1 / -1; margin-top: 7px; text-align: right; font-size: clamp(15px, 1.65vw, 22px); font-weight: 1000; color: var(--wine); }
+    .urgent-call-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 3px;
+      margin-top: 7px;
+      padding: 8px 10px;
+      border: 1px solid #edc875;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fff6d8, #ffe6b3);
+      box-shadow: inset 0 1px 0 #fff;
+      color: #70412a;
+      font-size: clamp(9px, .9vw, 12px);
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .urgent-call-panel[hidden] { display: none; }
+    .urgent-call-title { margin: 0; color: #8e2c28; font-size: 1.02em; letter-spacing: .06em; }
+    .urgent-call-status { margin: 0; }
+    .urgent-call-panel.success { border-color: #9ecb9c; background: linear-gradient(135deg, #edfae9, #d8f0d2); color: #315f35; }
+    .urgent-call-panel.success .urgent-call-title { color: #315f35; }
+    .urgent-call-panel.failed { border-color: #d8c6bd; background: linear-gradient(135deg, #f4efeb, #e9ded7); color: #745f57; }
+    .urgent-call-panel.failed .urgent-call-title { color: #745f57; }
     .board {
       position: absolute;
       z-index: 1;
@@ -91,8 +114,8 @@
       width: 48.8%;
       height: 71.8%;
       display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
-      grid-template-rows: repeat(8, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
       gap: .42%;
       padding: .15%;
       border-radius: 12px;
@@ -107,20 +130,371 @@
       display: grid;
       place-items: center;
       overflow: hidden;
-      padding: 0;
-      border: 1px solid #8e384088;
+      padding: clamp(3px, .4vw, 5px);
+      border: 2px solid var(--drop-color, #8e384088);
       border-radius: clamp(4px, .55vw, 9px);
-      background: #fff5e5;
+      background: var(--drop-color, #fff5e5);
       box-shadow: inset 0 0 0 1px #fff8;
       cursor: pointer;
       transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
       -webkit-user-drag: none;
       user-select: none;
     }
-    .tile img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+    .tile img { display: block; width: 100%; height: 100%; border-radius: clamp(2px, .35vw, 5px); object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+    .tile.special-wild { position: relative; padding: 1px; border-color: #ffe27a; background: #fff; box-shadow: inset 0 0 0 1px #fff, 0 0 11px #ffbd4b; }
+    .tile.special-plasma { position: relative; padding: 1px; border-color: #ffd26c; background: linear-gradient(145deg, #8b1932, #4a0913); box-shadow: inset 0 0 0 1px #fff, 0 0 11px #ffbd4b; }
+    .tile .special-emblem { position: absolute; z-index: 2; right: -3%; bottom: -3%; width: 48%; height: 48%; object-fit: contain; filter: drop-shadow(0 1px 2px #4a0913aa); }
+    .tile.special-wild .special-emblem { inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px #130d38aa); }
+    .tile.special-plasma .special-emblem { inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px #35000aaa); }
+    .tile.bandaged { padding: 1px; border: 2px solid #fff0c2; background: linear-gradient(145deg, #fff9ea, #d8b99b); box-shadow: inset 0 0 0 1px #fff, 0 0 9px #ffe7a3aa; cursor: default; }
+    .tile.bandaged img { width: 100%; height: 100%; object-fit: contain; }
     .tile.selected { transform: scale(.92); box-shadow: inset 0 0 0 3px var(--gold), 0 0 13px #ffe279; filter: brightness(1.08); }
-    .tile.clearing { transform: scale(.62); opacity: 0; filter: brightness(1.6); transition: transform .18s ease, opacity .18s ease, filter .18s ease; }
+    .tile.clearing {
+      position: relative;
+      z-index: 1;
+      animation: drop-clear .28s cubic-bezier(.2, .8, .25, 1) both;
+      will-change: transform, opacity, filter;
+    }
+    .tile.clearing::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 76%;
+      aspect-ratio: 1;
+      border: 1px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 12px 3px var(--drop-color), inset 0 0 9px #fff;
+      opacity: 0;
+      pointer-events: none;
+      animation: drop-ripple .28s ease-out both;
+    }
+    .tile.falling { animation: drop-in .24s cubic-bezier(.2, .8, .25, 1) var(--fall-delay, 0ms) both; }
+    .tile.blocked { border: 0; background: transparent; box-shadow: none; cursor: default; opacity: 0; pointer-events: none; }
+    .tile.transferring { position: relative; z-index: 10; pointer-events: none; animation: drop-transfer .38s cubic-bezier(.2, .8, .25, 1) both; }
+    .tile.shuffle-out { animation: shuffle-out .32s cubic-bezier(.5, 0, .7, .2) var(--shuffle-delay, 0ms) both; pointer-events: none; }
+    .tile.shuffle-in { animation: shuffle-in .34s cubic-bezier(.2, .8, .25, 1) var(--shuffle-delay, 0ms) both; }
+    .hemocon {
+      position: absolute;
+      z-index: 5;
+      inset: 0;
+      display: block;
+      min-width: 0;
+      min-height: 0;
+      overflow: visible;
+      pointer-events: auto;
+      cursor: pointer;
+      touch-action: manipulation;
+      isolation: isolate;
+      border: 4px solid var(--hemocon-color, #e1748e);
+      border-radius: clamp(8px, 1vw, 15px);
+      background: color-mix(in srgb, var(--hemocon-color, #e1748e) 34%, white);
+      box-shadow: inset 0 0 0 2px #fff8, 0 4px 12px #31101b55, 0 0 12px color-mix(in srgb, var(--hemocon-color, #e1748e) 60%, transparent);
+      transition: filter .18s ease, transform .18s ease;
+    }
+    .hemocon.accepting { filter: drop-shadow(0 0 11px #ffd66a); transform: scale(1.035); }
+    .hemocon.absorbing { animation: hemocon-absorb .32s ease-in-out; }
+    .hemocon-fluid {
+      position: absolute;
+      z-index: 1;
+      left: 17%;
+      right: 18%;
+      bottom: 9%;
+      height: var(--fill-height, 0%);
+      max-height: 58%;
+      overflow: hidden;
+      border-radius: 18% 18% 30% 30% / 9% 9% 14% 14%;
+      background: linear-gradient(180deg, #fa5262 0%, #d51f38 28%, #a80d29 100%);
+      box-shadow: inset 0 4px 10px #ffb4ba55, 0 0 12px #d81c3866;
+      clip-path: polygon(6% 0, 94% 0, 100% 22%, 96% 78%, 84% 100%, 16% 100%, 4% 78%, 0 22%);
+      transition: height .48s cubic-bezier(.2, .8, .25, 1);
+    }
+    .hemocon-backing {
+      position: absolute;
+      z-index: 0;
+      left: 17%;
+      right: 18%;
+      top: 25%;
+      bottom: 9%;
+      background: linear-gradient(180deg, #eff9f7e8, #fffaf2ee);
+      clip-path: polygon(6% 0, 94% 0, 100% 22%, 96% 78%, 84% 100%, 16% 100%, 4% 78%, 0 22%);
+    }
+    .hemocon-fluid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -8%;
+      width: 116%;
+      height: 5px;
+      border-radius: 50%;
+      background: #ffd9dcaa;
+      box-shadow: 0 2px 7px #ffb4ba88;
+    }
+    .hemocon-shell { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .hemocon-label {
+      position: absolute;
+      z-index: 3;
+      top: 44%;
+      left: 28%;
+      width: 44%;
+      height: 26%;
+      display: grid;
+      place-content: center;
+      gap: 1px;
+      color: #701526;
+      text-align: center;
+      text-shadow: 0 1px 0 #fff;
+    }
+    .hemocon-label strong { font-size: clamp(12px, 1.2vw, 19px); line-height: 1; font-weight: 1000; }
+    .hemocon-label span { font-size: clamp(9px, .82vw, 12px); line-height: 1; font-weight: 900; }
+    .hemocon.complete { animation: hemocon-pop .32s cubic-bezier(.2, .8, .25, 1) both; }
+    .board.shuffling { filter: brightness(1.18) saturate(1.16); }
+    .board.shuffle-arrival { animation: shuffle-board-in .34s ease-out both; }
+    @keyframes hemocon-pop {
+      0% { transform: scale(1); filter: brightness(1); }
+      45% { transform: scale(1.16); filter: brightness(1.8); }
+      100% { transform: scale(.2); opacity: 0; filter: brightness(2.2); }
+    }
+    @keyframes drop-transfer {
+      to { transform: translate(var(--fly-x), var(--fly-y)) scale(.22); opacity: 0; filter: brightness(1.8); }
+    }
+    @keyframes hemocon-absorb {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.65) drop-shadow(0 0 12px #ffd66a); transform: scale(1.06); }
+    }
+    @keyframes shuffle-out {
+      to { transform: scale(.18) rotate(115deg); opacity: 0; filter: blur(3px); }
+    }
+    @keyframes shuffle-in {
+      0% { transform: scale(.2) rotate(-95deg); opacity: 0; filter: blur(3px) brightness(1.8); }
+      75% { transform: scale(1.08) rotate(4deg); opacity: 1; filter: blur(0) brightness(1.25); }
+      100% { transform: scale(1) rotate(0); opacity: 1; filter: none; }
+    }
+    @keyframes shuffle-board-in {
+      0% { filter: brightness(1.4) saturate(1.3); }
+      100% { filter: brightness(1) saturate(1); }
+    }
+    .tile.hint {
+      position: relative;
+      z-index: 2;
+      outline: 3px solid #ffe279;
+      outline-offset: -3px;
+      box-shadow: inset 0 0 0 2px #fff, 0 0 14px 4px #ffe279;
+      animation: hint-pulse .8s ease-in-out 3;
+    }
+    .tile.powerup-selected {
+      position: relative;
+      z-index: 2;
+      outline: 4px solid #fff;
+      outline-offset: -4px;
+      box-shadow: inset 0 0 0 3px #e9ad42, 0 0 15px 5px #ffe279;
+      transform: scale(.92);
+    }
+    @keyframes hint-pulse {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(.9); filter: brightness(1.3); }
+    }
+    @keyframes drop-clear {
+      0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+      18% { transform: scale(1.1); opacity: 1; filter: brightness(1.5); }
+      100% { transform: scale(.32) rotate(-9deg); opacity: 0; filter: brightness(2); }
+    }
+    @keyframes drop-in {
+      0% { transform: translateY(-70%) scale(.72); opacity: .2; filter: brightness(1.6); }
+      68% { transform: translateY(4%) scale(1.05); opacity: 1; filter: brightness(1.15); }
+      100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
+    }
+    @keyframes drop-ripple {
+      0%, 10% { transform: translate(-50%, -50%) scale(.3); opacity: 0; }
+      24% { transform: translate(-50%, -50%) scale(.75); opacity: .95; }
+      100% { transform: translate(-50%, -50%) scale(1.65); opacity: 0; }
+    }
     .tile:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+    .helper-panel {
+      position: absolute;
+      z-index: 4;
+      top: 12%;
+      bottom: 13%;
+      left: 1.2%;
+      width: 18.7%;
+      display: grid;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+    .helper-button {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: clamp(48px, 6vw, 82px) minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(5px, .65vw, 10px);
+      padding: clamp(5px, .7vw, 10px);
+      border: 1px solid #fff;
+      border-radius: 17px;
+      background: #fff8ebf2;
+      box-shadow: var(--shadow);
+      color: var(--wine);
+      text-align: left;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+    .helper-button:active:not(:disabled) { transform: scale(.97); }
+    .helper-button:disabled { opacity: .52; cursor: not-allowed; filter: saturate(.6); }
+    .helper-button.unaffordable { border-color: #eadbd2; }
+    .helper-button.armed { outline: 3px solid var(--gold); outline-offset: -3px; background: #fff0d2; }
+    .helper-icon { display: block; width: 100%; height: clamp(46px, 7.5vh, 84px); object-fit: contain; filter: drop-shadow(0 3px 4px #44101b35); }
+    .helper-copy { min-width: 0; display: grid; gap: 4px; }
+    .helper-name { color: #6c1525; font-size: clamp(10px, 1.08vw, 14px); font-weight: 1000; line-height: 1.12; }
+    .helper-price { color: #7b565b; font-size: clamp(10px, .92vw, 12px); font-weight: 900; white-space: nowrap; }
+    .intro-overlay {
+      position: absolute;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #310913c9;
+      backdrop-filter: blur(4px);
+    }
+    .intro-overlay[hidden] { display: none; }
+    .intro-card {
+      width: min(94%, 620px);
+      max-height: min(94dvh, 860px);
+      overflow: auto;
+      padding: clamp(18px, 3vw, 30px);
+      border: 2px solid #fff;
+      border-radius: 24px;
+      background: var(--cream);
+      box-shadow: 0 14px 44px #26000c66;
+    }
+    .intro-card h1 { margin: 0 0 8px; color: var(--wine); font-size: clamp(25px, 4vw, 36px); text-align: center; }
+    .intro-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto 14px; }
+    .intro-brand img { display: block; width: clamp(54px, 8vw, 76px); aspect-ratio: 1; padding: 3px; border: 2px solid #fff; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px #31101b25; object-fit: contain; }
+    .intro-brand-copy { display: grid; gap: 3px; text-align: left; }
+    .intro-brand-copy span { color: #88676b; font-size: clamp(10px, 1.5vw, 13px); font-weight: 800; }
+    .intro-brand-copy strong { display: flex; align-items: center; gap: .1em; color: var(--wine); font-size: clamp(20px, 3.5vw, 29px); line-height: 1.05; }
+    .intro-blood-drop { font-size: .78em; filter: drop-shadow(0 2px 2px #7b172644); }
+    .intro-lead { margin: 0 0 12px; color: #725459; font-weight: 800; line-height: 1.4; text-align: center; }
+    .intro-rules { margin: 0 0 14px; padding-left: 23px; color: #54343a; font-size: 14px; font-weight: 700; line-height: 1.4; }
+    .intro-rules li + li { margin-top: 5px; }
+    .intro-card h2 { margin: 0 0 8px; color: var(--wine); font-size: 18px; }
+    .intro-power-list { display: grid; gap: 7px; margin: 0 0 10px; }
+    .intro-power { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 9px; padding: 6px 9px; border: 1px solid #efd9cf; border-radius: 13px; background: #fff5ed; }
+    .intro-power img { width: 46px; height: 46px; object-fit: contain; }
+    .intro-power strong { display: block; margin-bottom: 2px; color: #701526; font-size: 13px; }
+    .intro-power span { display: block; color: #725459; font-size: 12px; font-weight: 700; line-height: 1.25; }
+    .intro-note { margin: 0 0 12px; color: #88696d; font-size: 11px; font-weight: 700; text-align: center; }
+    .start-game { display: block; width: 100%; min-height: 48px; font-size: 16px; }
+    .hemocon-tutorial-overlay {
+      position: absolute;
+      z-index: 25;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #310913dc;
+      backdrop-filter: blur(5px);
+    }
+    .hemocon-tutorial-overlay[hidden] { display: none; }
+    .hemocon-tutorial-card {
+      width: min(96%, 740px);
+      max-height: min(94dvh, 850px);
+      overflow-y: auto;
+      padding: clamp(16px, 3vw, 28px);
+      border: 2px solid #fff;
+      border-radius: 23px;
+      background: var(--cream);
+      box-shadow: 0 14px 44px #26000c80;
+    }
+    .hemocon-tutorial-card h1 { margin: 0 0 8px; color: var(--wine); font-size: clamp(23px, 4vw, 34px); text-align: center; }
+    .hemocon-tutorial-lead { margin: 0 0 14px; color: #725459; font-weight: 800; line-height: 1.4; text-align: center; }
+    .hemocon-tutorial-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .9fr); align-items: center; gap: clamp(12px, 2.5vw, 24px); }
+    .hemocon-tutorial-copy { display: grid; gap: 10px; color: #54343a; font-size: 14px; font-weight: 750; line-height: 1.42; }
+    .hemocon-tutorial-copy p { margin: 0; }
+    .hemocon-tutorial-copy strong { color: #781829; }
+    .hemocon-tutorial-note { padding: 10px 12px; border: 1px solid #eed8cb; border-radius: 13px; background: #fff4e9; }
+    .wild-demo-wrap { display: grid; justify-items: center; gap: 8px; padding: 15px; border: 1px solid #eed8cb; border-radius: 16px; background: #fff4e9; text-align: center; }
+    .wild-demo-line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; width: min(100%, 270px); }
+    .wild-demo-line span { position: relative; display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border: 2px solid #d97b83; border-radius: 8px; background: #fff; }
+    .wild-demo-line span > img:first-child { width: 100%; height: 100%; object-fit: contain; }
+    .wild-demo-line .wild-demo-special { border-color: #efbc61; box-shadow: 0 0 8px #ffbd4b; }
+    .wild-demo-line .wild-demo-emblem { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .wild-demo-wrap p { margin: 0; color: #725459; font-size: 12px; font-weight: 900; }
+    .wild-demo-art { width: 100px; height: 100px; padding: 6px; border: 1px solid #e7e5e5; border-radius: 16px; background: #fff; object-fit: contain; }
+    .double-order-demo { display: flex; align-items: center; justify-content: center; gap: clamp(7px, 1.3vw, 14px); margin-top: 3px; }
+    .double-order-step { display: grid; justify-items: center; gap: 3px; color: #725459; font-size: 11px; font-weight: 900; }
+    .double-order-step img { display: block; width: clamp(42px, 7vw, 58px); aspect-ratio: 1; padding: 2px; border: 2px solid #d97b83; border-radius: 10px; background: #fff; object-fit: contain; }
+    .double-order-arrow { color: #9d2639; font-size: 24px; font-weight: 1000; }
+    .plasma-demo-wrap { display: grid; justify-items: center; gap: 8px; padding: 15px; border: 1px solid #eed8cb; border-radius: 16px; background: #fff4e9; text-align: center; }
+    .plasma-demo-line { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; width: min(100%, 230px); }
+    .plasma-demo-line span { position: relative; display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border: 2px solid #d97b83; border-radius: 8px; background: #fff; }
+    .plasma-demo-line span > img:first-child { width: 100%; height: 100%; object-fit: contain; }
+    .plasma-demo-line .plasma-demo-special { border-color: #efbc61; background: linear-gradient(145deg, #8b1932, #4a0913); box-shadow: 0 0 8px #ffbd4b; }
+    .plasma-demo-line .plasma-demo-emblem { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .plasma-demo-wrap p { margin: 0; color: #725459; font-size: 12px; font-weight: 900; }
+    .plasma-demo-art { width: 90px; height: 90px; object-fit: contain; }
+    .bandage-demo-wrap { display: grid; justify-items: center; gap: 10px; padding: 15px; border: 1px solid #eed8cb; border-radius: 16px; background: #fff4e9; text-align: center; }
+    .bandage-demo-wrap img { width: min(100%, 190px); aspect-ratio: 1; object-fit: contain; }
+    .bandage-demo-wrap p { margin: 0; color: #725459; font-size: 12px; font-weight: 900; }
+    .hemocon-demo-wrap { display: grid; justify-items: center; gap: 8px; }
+    .hemocon-demo-board {
+      position: relative;
+      width: min(100%, 290px);
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      gap: 3px;
+      padding: 5px;
+      border: 2px solid #e8bcc0;
+      border-radius: 16px;
+      background: #4a0913;
+      box-shadow: 0 8px 20px #45132235;
+      overflow: hidden;
+    }
+    .hemocon-demo-cell { min-width: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid #fff8; border-radius: 5px; background: var(--demo-drop-color, #fff); }
+    .hemocon-demo-cell img { width: 92%; height: 92%; object-fit: contain; }
+    .hemocon-demo-cell.remote-drop { position: relative; z-index: 2; outline: 2px solid #ffe279; outline-offset: -2px; box-shadow: 0 0 9px #ffe279; }
+    .hemocon-demo-arrows { position: absolute; z-index: 4; inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px); overflow: visible; pointer-events: none; }
+    .hemocon-demo-arrows path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .hemocon-drag-arrow { stroke: #ffe279; stroke-width: 2.8; stroke-dasharray: 4 2; animation: demo-dash 1s linear infinite; }
+    .hemocon-ray-arrow { stroke: #fff7f4; stroke-width: 1.6; stroke-dasharray: 2 2; opacity: .95; }
+    .hemocon-demo-bag {
+      position: absolute;
+      z-index: 3;
+      left: 33.3%;
+      top: 33.3%;
+      width: 33.4%;
+      height: 33.4%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 3px solid var(--demo-hemocon-color, #e1748e);
+      border-radius: 11px;
+      background: color-mix(in srgb, var(--demo-hemocon-color, #e1748e) 34%, white);
+      box-shadow: 0 0 11px color-mix(in srgb, var(--demo-hemocon-color, #e1748e) 65%, transparent), inset 0 0 0 1px #fff;
+    }
+    .hemocon-demo-bag img { width: 100%; height: 100%; object-fit: contain; }
+    .hemocon-demo-bag strong { position: absolute; z-index: 2; top: 44%; padding: 1px 4px; border-radius: 5px; background: #fffa; color: #701526; font-size: clamp(9px, 2.4vw, 14px); line-height: 1.1; text-shadow: 0 1px #fff; }
+    .hemocon-demo-caption { color: #76565a; font-size: 11px; font-weight: 900; text-align: center; }
+    @keyframes demo-dash { to { stroke-dashoffset: -12; } }
+    .tile.hemocon-transforming { position: relative; z-index: 2; animation: hemocon-ray-in .42s cubic-bezier(.2, .8, .25, 1) var(--projection-delay, 0ms) both; }
+    .hemocon.projecting { animation: hemocon-project .45s ease-in-out infinite; }
+    .hemocon.ready:not(.projecting) { animation: hemocon-ready .95s ease-in-out infinite; }
+    @keyframes hemocon-ray-in {
+      0% { transform: scale(.82); filter: brightness(1); }
+      55% { transform: scale(1.16); filter: brightness(1.75) drop-shadow(0 0 9px #fff); }
+      100% { transform: scale(1); filter: brightness(1.2); }
+    }
+    @keyframes hemocon-project {
+      0%, 100% { filter: brightness(1) drop-shadow(0 0 3px #fff); }
+      50% { filter: brightness(1.75) drop-shadow(0 0 14px #ffe279); transform: scale(1.07); }
+    }
+    @keyframes hemocon-ready {
+      0%, 100% { box-shadow: inset 0 0 0 2px #fff8, 0 4px 12px #31101b55, 0 0 7px var(--hemocon-color); }
+      50% { box-shadow: inset 0 0 0 3px #fff, 0 4px 14px #31101b66, 0 0 20px var(--hemocon-color); }
+    }
     .bottom-panel {
       position: absolute;
       z-index: 3;
@@ -179,6 +553,12 @@
       transition: opacity .15s ease, transform .15s ease;
     }
     .status.visible { transform: translate(-50%, 0); opacity: 1; }
+    .status.combo.visible { border-color: #ffd66a; background: linear-gradient(180deg, #fff6d6, #ffe5a5); color: #761323; animation: combo-pop .28s cubic-bezier(.2, .8, .25, 1) both; }
+    @keyframes combo-pop {
+      0% { transform: translate(-50%, 12px) scale(.72); }
+      72% { transform: translate(-50%, -2px) scale(1.08); }
+      100% { transform: translate(-50%, 0) scale(1); }
+    }
     .win-overlay {
       position: absolute;
       z-index: 10;
@@ -192,6 +572,8 @@
     .win-overlay[hidden] { display: none; }
     .win-card {
       width: min(92%, 420px);
+      max-height: min(94dvh, 720px);
+      overflow-y: auto;
       padding: clamp(20px, 4vw, 34px);
       border: 2px solid white;
       border-radius: 24px;
@@ -199,8 +581,87 @@
       box-shadow: 0 14px 40px #26000c55;
       text-align: center;
     }
+    .win-card.final-celebration {
+      width: min(94%, 470px);
+      border-color: #efbc61;
+      background: radial-gradient(ellipse at top, #fff4d7 0, var(--cream) 52%);
+    }
+    .final-trophy {
+      display: block;
+      width: min(38vw, 170px);
+      height: min(23dvh, 170px);
+      margin: 0 auto 6px;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 12px #8a451d44);
+    }
+    .final-trophy[hidden] { display: none; }
+    .win-card.final-celebration h1 { color: #8a451d; }
+    .win-card.final-celebration .donor-wish { border-color: #edca7d; background: #fff7df; }
     .win-card h1 { margin: 0 0 10px; color: var(--wine); font-size: clamp(24px, 4vw, 38px); }
     .win-card p { margin: 0 0 20px; color: #725459; font-weight: 700; line-height: 1.5; }
+    .donor-wish {
+      margin: -6px 0 20px;
+      padding: 12px 14px;
+      border: 1px solid #f0d1c2;
+      border-radius: 14px;
+      background: #fff0e8;
+      color: #7c2533;
+      font-size: clamp(14px, 2vw, 16px);
+      font-weight: 800;
+      line-height: 1.45;
+      text-wrap: balance;
+    }
+    .ticket-name-label {
+      display: block;
+      margin: 0 0 6px;
+      color: #725459;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: left;
+    }
+    .ticket-name-input {
+      width: 100%;
+      min-height: 44px;
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border: 1px solid #d9b8ad;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--wine);
+      font: inherit;
+      font-size: 16px;
+    }
+    .ticket-button {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      margin: 0 0 10px;
+      padding: 10px 14px;
+      border: 1px solid #a72b3d;
+      border-radius: 13px;
+      background: linear-gradient(180deg, #fff, #f9e6dd);
+      color: var(--wine);
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .ticket-button:disabled { opacity: .65; cursor: wait; }
+    .ticket-button[hidden] { display: none; }
+    .ticket-button.secondary {
+      border-color: #dfc3b7;
+      background: #fffdf9;
+      color: #7c2533;
+    }
+    .ticket-status {
+      min-height: 1.3em;
+      margin: 0 0 10px;
+      color: #725459;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .ticket-status:empty { display: none; }
+    .win-card #playAgain { width: 100%; }
     @media (max-width: 900px) and (orientation: portrait) {
       .scene {
         width: 100vw;
@@ -250,9 +711,10 @@
       .target-description { grid-column: 2; grid-row: 3; margin: 0; font-size: 10px; }
       .progress-track { grid-column: 3; grid-row: 2; width: 100%; min-width: 62px; height: 9px; margin: 0; }
       .progress-count { grid-column: 3; grid-row: 3; margin: 0; font-size: 14px; }
+      .urgent-call-panel { margin-top: 2px; padding: 5px 7px; gap: 2px; font-size: 9px; }
       .board {
-        left: 50%; top: max(33%, calc(env(safe-area-inset-top) + 244px));
-        width: min(93.6%, 60dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 262px));
+        left: 50%; top: max(36dvh, calc(env(safe-area-inset-top) + 260px));
+        width: min(93.6%, 60dvh, calc(100dvh - max(36dvh, calc(env(safe-area-inset-top) + 260px)) - env(safe-area-inset-bottom) - 92px));
         height: auto; aspect-ratio: 1;
         transform: translateX(-50%);
         gap: .48%; padding: 1.1%; border-radius: 17px;
@@ -260,6 +722,53 @@
         box-shadow: inset 0 0 0 2px #f8ded4cc, 0 0 22px #e34245a8;
       }
       .tile { border-radius: 5px; }
+      .helper-panel {
+        top: auto;
+        bottom: max(4px, env(safe-area-inset-bottom));
+        left: 3%;
+        right: 3%;
+        width: auto;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-rows: 1fr;
+        gap: 5px;
+      }
+      .helper-button {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 38px auto;
+        justify-items: center;
+        gap: 1px;
+        padding: 3px 2px;
+        border-radius: 12px;
+        text-align: center;
+      }
+      .helper-icon { width: 42px; height: 38px; }
+      .helper-copy { justify-items: center; gap: 1px; }
+      .helper-name { font-size: clamp(8px, 2.55vw, 10px); line-height: 1.05; }
+      .helper-price { font-size: clamp(8px, 2.35vw, 10px); line-height: 1.05; }
+      .intro-overlay { padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+      .intro-card { width: 100%; max-height: 100%; padding: 16px; border-radius: 19px; }
+      .hemocon-tutorial-overlay { padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+      .hemocon-tutorial-card { width: 100%; max-height: 100%; padding: 15px; border-radius: 19px; }
+      .hemocon-tutorial-card h1 { font-size: clamp(21px, 6vw, 27px); }
+      .hemocon-tutorial-lead { margin-bottom: 9px; font-size: 13px; }
+      .hemocon-tutorial-layout { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+      .hemocon-tutorial-copy { grid-template-columns: 1fr 1fr; gap: 7px; font-size: 12px; }
+      .hemocon-tutorial-note { padding: 8px; }
+      .hemocon-demo-board { width: min(62vw, 230px); gap: 2px; padding: 4px; }
+      .hemocon-demo-arrows { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); }
+      .hemocon-demo-caption { font-size: 10px; }
+      .intro-brand { gap: 8px; margin-bottom: 10px; }
+      .intro-brand img { width: 52px; }
+      .intro-brand-copy strong { font-size: clamp(18px, 5vw, 23px); }
+      .intro-brand-copy span { font-size: 10px; }
+      .hemocon-label strong { font-size: clamp(10px, 3vw, 14px); }
+      .hemocon-label span { font-size: clamp(8px, 2.2vw, 10px); }
+      .intro-rules { font-size: 13px; }
+      .intro-power { grid-template-columns: 42px minmax(0, 1fr); gap: 7px; padding: 5px 7px; }
+      .intro-power img { width: 40px; height: 40px; }
+      .intro-power strong { font-size: 12px; }
+      .intro-power span { font-size: 11px; }
+      .status { bottom: calc(env(safe-area-inset-bottom) + 96px); }
       .bottom-panel {
         position: static;
         left: auto; right: auto; bottom: auto; min-height: 0;
@@ -276,7 +785,7 @@
       .stat-label { font-size: 7px; }
       .stat-value { font-size: clamp(15px, 4.2vw, 19px); }
       .instructions { grid-column: 1 / 3; grid-row: 2; font-size: 9px; line-height: 1.25; }
-      .new-game { grid-column: 3; grid-row: 1 / 3; min-height: 40px; padding: 7px 10px; font-size: 11px; white-space: nowrap; }
+      .new-game { grid-column: 3; grid-row: 1 / 3; min-height: 40px; padding: 7px 9px; font-size: 11px; white-space: nowrap; }
       .status { bottom: 7%; border-radius: 14px; }
     }
     @media (max-width: 380px) and (orientation: portrait) {
@@ -286,8 +795,14 @@
       .target-name { font-size: 20px; }
       .target-description { font-size: 9px; }
       .progress-track { min-width: 52px; }
-      .board { width: min(96%, 60dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 262px)); }
-      .new-game { padding-inline: 8px; }
+      .urgent-call-panel { padding: 4px 6px; font-size: 8px; }
+      .board { width: min(96%, 60dvh, calc(100dvh - max(36dvh, calc(env(safe-area-inset-top) + 260px)) - env(safe-area-inset-bottom) - 92px)); }
+      .helper-panel { left: 2%; right: 2%; gap: 3px; }
+      .helper-icon { width: 36px; }
+      .helper-name { font-size: 8px; }
+      .hemocon-tutorial-copy { grid-template-columns: minmax(0, 1fr); }
+      .helper-price { font-size: 8px; }
+      .new-game { padding-inline: 7px; font-size: 10px; }
     }
     @media (max-height: 620px) and (orientation: landscape) {
       .scene { width: min(100vw, 150vh); height: min(100vh, 66.6667vw); }
@@ -302,35 +817,210 @@
 </head>
 <body>
   <main class="game">
-    <section class="scene" aria-label="Гра з краплинками крові">
+    <section class="scene" aria-label="Гра «Краплинки добра» про групи крові">
       <div class="station-mark" role="img" aria-label="Логотип Полтавської обласної станції переливання крові">
         <img src="assets/station-logo.png" alt="">
       </div>
 
       <div class="hud-stack">
         <section class="target-panel" aria-live="polite" aria-label="Завдання рівня">
-          <p class="target-kicker" id="targetKicker">Рівень 1 із 5 · ціль</p>
+          <p class="target-kicker" id="targetKicker">Рівень 1 · ціль</p>
           <img class="target-drop" id="targetDrop" alt="">
           <h1 class="target-name" id="targetName">I+</h1>
           <p class="target-description">Збери краплинки цієї групи</p>
           <div class="progress-track" role="progressbar" id="progressTrack" aria-label="Прогрес завдання" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div>
           <div class="progress-count" id="progressCount">0 / 10</div>
+          <section class="urgent-call-panel" id="urgentCallPanel" aria-live="polite" aria-atomic="true" hidden>
+            <p class="urgent-call-title">ТЕРМІНОВИЙ ВИКЛИК</p>
+            <p class="urgent-call-status" id="urgentCallStatus"></p>
+          </section>
         </section>
         <section class="bottom-panel" aria-label="Статистика та керування">
           <div class="stat"><span class="stat-label">Рахунок</span><strong class="stat-value" id="score">0</strong></div>
-          <div class="stat"><span class="stat-label">Удалі ходи</span><strong class="stat-value" id="moves">0</strong></div>
-          <p class="instructions">Переставляй сусідні краплинки. Лінія з 3 або більше однакових збирається автоматично.</p>
+          <div class="stat"><span class="stat-label">Вдалі ходи</span><strong class="stat-value" id="moves">0</strong></div>
+          <p class="instructions">Краплинки добра · складай лінії з 3+ однакових краплинок.</p>
           <button class="new-game" id="newGame" type="button">Нова гра</button>
         </section>
       </div>
 
-      <div class="board" id="board" role="grid" aria-label="Ігрове поле, 8 на 8"></div>
+      <div class="board" id="board" role="grid" aria-label="Ігрове поле, 6 на 6"></div>
+      <aside class="helper-panel" aria-label="Чарівні допомоги">
+        <button class="helper-button" id="needleHelp" type="button" aria-label="Чарівна голочка — підказка за 200 балів">
+          <img class="helper-icon" src="assets/powerup-needle.webp" alt="">
+          <span class="helper-copy"><span class="helper-name">Чарівна голочка</span><span class="helper-price">200 балів</span></span>
+        </button>
+        <button class="helper-button" id="syringeHelp" type="button" aria-label="Чарівний шприц — довільний обмін за 2 000 балів" aria-pressed="false">
+          <img class="helper-icon" src="assets/powerup-syringe.webp" alt="">
+          <span class="helper-copy"><span class="helper-name">Чарівний шприц</span><span class="helper-price">2 000 балів</span></span>
+        </button>
+        <button class="helper-button" id="centrifugeHelp" type="button" aria-label="Чарівна центрифуга — групування крапель за 5 000 балів">
+          <img class="helper-icon" src="assets/powerup-centrifuge.webp" alt="">
+          <span class="helper-copy"><span class="helper-name">Чарівна центрифуга</span><span class="helper-price">5 000 балів</span></span>
+        </button>
+      </aside>
       <div class="status" id="status" role="status" aria-live="polite"></div>
+
+      <div class="intro-overlay" id="introOverlay">
+        <section class="intro-card" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+          <div class="intro-brand">
+            <img src="assets/station-logo.png" alt="Логотип Полтавської обласної станції переливання крові">
+            <div class="intro-brand-copy">
+              <span>Гра "Полтавської обласної станції переливання крові"</span>
+              <strong><span class="intro-blood-drop" aria-hidden="true">🩸</span> Краплинки добра <span class="intro-blood-drop" aria-hidden="true">🩸</span></strong>
+            </div>
+          </div>
+          <h1 id="introTitle">Як грати</h1>
+          <p class="intro-lead">Збирай краплинки, виконуй завдання рівня та набирай бали. Кожна вдала лінія наближає до перемоги!</p>
+          <ol class="intro-rules">
+            <li>Обмінюй сусідні краплинки, щоб скласти лінію з 3 або більше однакових.</li>
+            <li>Збирай краплинки потрібної групи крові. З кожним рівнем потрібно більше, а з 2-го — дві групи по черзі.</li>
+            <li>Нові краплі можуть утворити лінію під час падіння — лови каскади й множник комбо!</li>
+          </ol>
+          <h2>Чарівні допомоги</h2>
+          <div class="intro-power-list">
+            <div class="intro-power"><img src="assets/powerup-needle.webp" alt=""><div><strong>Голочка · 200 балів</strong><span>Одразу підсвічує один можливий хід.</span></div></div>
+            <div class="intro-power"><img src="assets/powerup-syringe.webp" alt=""><div><strong>Шприц · 2 000 балів</strong><span>Натисни допомогу й вибери дві будь-які різні краплинки.</span></div></div>
+            <div class="intro-power"><img src="assets/powerup-centrifuge.webp" alt=""><div><strong>Центрифуга · 5 000 балів</strong><span>Групує однакові краплинки; готові лінії одразу зникають і дають бали.</span></div></div>
+          </div>
+          <p class="intro-note">Допомоги оплачуються балами з твого рахунку. Шприц можна скасувати повторним натисканням до вибору обох краплинок.</p>
+          <button class="new-game start-game" id="startGame" type="button">Почати гру</button>
+        </section>
+      </div>
+
+      <div class="hemocon-tutorial-overlay" id="hemoconTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="hemoconTutorialTitle">
+          <h1 id="hemoconTutorialTitle">Нова механіка: гемокон</h1>
+          <p class="hemocon-tutorial-lead">Він з’явиться на полі з цього рівня. Подивись, як із ним взаємодіяти.</p>
+          <div class="hemocon-tutorial-layout">
+            <div class="hemocon-tutorial-copy">
+              <p><strong>1. Наповни:</strong> перенось у гемокон краплі тільки його групи. Можна перетягувати краплину <strong>з будь-якої клітинки поля — навіть несуміжної</strong>; або вибрати її дотиком і торкнутися гемокона.</p>
+              <p><strong>2. Дочекайся 10 крапель:</strong> заповнений гемокон спочатку дочекається завершення всіх поточних ліній, падіння та каскадів. Потім перетворить краплі вздовж проєкцій <strong>угору, вниз, ліворуч і праворуч</strong> на краплі своєї групи — і тільки після цього зникне.</p>
+              <p class="hemocon-tutorial-note">За заповнений гемокон — 1 000 балів. Якщо його група цільова, ще й +10 до прогресу. На рівні гемокон лише один.</p>
+            </div>
+            <div class="hemocon-demo-wrap">
+              <div class="hemocon-demo-board" id="hemoconDemoBoard" role="img" aria-label="Ілюстрація: перетягування краплі з віддаленої клітинки до гемокона та перетворення крапель навколо нього у чотирьох напрямках">
+                <svg class="hemocon-demo-arrows" viewBox="0 0 100 100" aria-hidden="true">
+                  <defs>
+                    <marker id="demoDragHead" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5 Z" fill="#ffe279"></path></marker>
+                    <marker id="demoRayHead" markerWidth="4" markerHeight="4" refX="3.2" refY="2" orient="auto"><path d="M0 0 L4 2 L0 4 Z" fill="#fff7f4"></path></marker>
+                  </defs>
+                  <path class="hemocon-drag-arrow" d="M 10 10 C 20 15, 30 28, 43 43" marker-end="url(#demoDragHead)"></path>
+                  <path class="hemocon-ray-arrow" d="M50 32 L50 3 M50 68 L50 97 M32 50 L3 50 M68 50 L97 50" marker-end="url(#demoRayHead)"></path>
+                </svg>
+                <div class="hemocon-demo-bag" id="hemoconDemoBag">
+                  <img src="assets/hemocon-shell.png" alt="">
+                  <strong id="hemoconDemoGroup">I+</strong>
+                </div>
+              </div>
+              <div class="hemocon-demo-caption">Золота стрілка — перенесення з будь-якого місця. Світлі стрілки — чотири напрямки перетворення.</div>
+            </div>
+          </div>
+          <button class="new-game start-game" id="hemoconTutorialStart" type="button">Зрозуміло, граємо</button>
+        </section>
+      </div>
+
+      <div class="hemocon-tutorial-overlay" id="wildTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="wildTutorialTitle">
+          <h1 id="wildTutorialTitle">Універсальна крапля й подвійне замовлення</h1>
+          <p class="hemocon-tutorial-lead">З 2-го рівня на полі буде універсальна крапля, а ціль складатиметься з двох послідовних замовлень.</p>
+          <div class="hemocon-tutorial-layout">
+            <div class="hemocon-tutorial-copy">
+              <p><strong>Створи:</strong> лінія з 5 або більше однакових краплинок залишить на полі універсальну краплю.</p>
+              <p><strong>Використай:</strong> вона може замінити будь-яку групу. Склади з нею лінію, де є щонайменше дві краплинки однієї групи.</p>
+              <p><strong>Подвійне замовлення:</strong> <span id="wildOrderRules">спочатку збери краплинки першої групи, потім — другої.</span></p>
+              <p class="hemocon-tutorial-note">П’ять однакових краплинок створюють ще одну універсальну. Така крапля зараховується як потрібна група й зникає разом із лінією.</p>
+            </div>
+            <div class="wild-demo-wrap" role="img" aria-label="П’ять однакових краплинок створюють універсальну краплю, яка підходить до будь-якої групи">
+              <div class="wild-demo-line">
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+                <span class="wild-demo-special"><img class="wild-demo-emblem" src="assets/special-wild.png" alt=""></span>
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+              </div>
+              <p>5 однакових → універсальна крапля</p>
+              <img class="wild-demo-art" src="assets/special-wild.png" alt="">
+              <p>Підходить до будь-якої групи</p>
+              <div class="double-order-demo" id="wildOrderDemo" role="img" aria-label="Спочатку збери першу групу крові, потім другу">
+                <div class="double-order-step"><small>1-ше</small><img id="wildOrderFirstDrop" src="assets/drop-i-plus.png" alt="Перша група замовлення"></div>
+                <span class="double-order-arrow" aria-hidden="true">→</span>
+                <div class="double-order-step"><small>2-ге</small><img id="wildOrderSecondDrop" src="assets/drop-iv-minus.png" alt="Друга група замовлення"></div>
+              </div>
+              <p>Спочатку перша група, потім друга</p>
+            </div>
+          </div>
+          <button class="new-game start-game" id="wildTutorialStart" type="button">Зрозуміло, граємо</button>
+        </section>
+      </div>
+
+      <div class="hemocon-tutorial-overlay" id="plasmaTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="plasmaTutorialTitle">
+          <h1 id="plasmaTutorialTitle">Нова механіка: плазмова крапля</h1>
+          <p class="hemocon-tutorial-lead">На початку четвертого рівня на полі з’явиться одна плазмова крапля без групи крові.</p>
+          <div class="hemocon-tutorial-layout">
+            <div class="hemocon-tutorial-copy">
+              <p><strong>Створи:</strong> лінія з 4 однакових краплинок залишить на полі плазмову краплю. На початку рівня 4 одна така крапля вже буде на полі.</p>
+              <p><strong>Підірви:</strong> двічі натисни на неї або двічі торкнися екрана. Вона очистить увесь рядок і стовпець — угору, вниз, ліворуч і праворуч.</p>
+              <p class="hemocon-tutorial-note">Плазмова крапля не має групи крові й не зараховується до цілі. Лінія з 5 краплин, як і раніше, створює універсальну.</p>
+            </div>
+            <div class="plasma-demo-wrap" role="img" aria-label="Лінія з чотирьох однакових краплинок створює плазмову краплю, яку можна підірвати подвійним натисканням для очищення рядка й стовпця">
+              <div class="plasma-demo-line">
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+                <span class="plasma-demo-special"><img class="plasma-demo-emblem" src="assets/special-plasma.png" alt=""></span>
+                <span><img src="assets/drop-i-plus.png" alt=""></span>
+              </div>
+              <p>4 краплі → плазмова крапля</p>
+              <img class="plasma-demo-art" src="assets/special-plasma.png" alt="">
+              <p>Подвійне натискання очищує хрест</p>
+            </div>
+          </div>
+          <button class="new-game start-game" id="plasmaTutorialStart" type="button">Зрозуміло, граємо</button>
+        </section>
+      </div>
+
+      <div class="hemocon-tutorial-overlay" id="bandageTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="bandageTutorialTitle">
+          <h1 id="bandageTutorialTitle">Нова механіка: медична пов’язка</h1>
+          <p class="hemocon-tutorial-lead">Пов’язки починають з’являтися з п’ятого рівня та закривають окремі клітинки поля. На кожному рівні буде від трьох до чотирьох пов’язок.</p>
+          <div class="hemocon-tutorial-layout">
+            <div class="hemocon-tutorial-copy">
+              <p><strong>Зніми пов’язку:</strong> склади лінію з 3 або більше краплинок поруч із нею по горизонталі чи вертикалі. Діагональне сусідство не рахується.</p>
+              <p><strong>Відкрий клітинку:</strong> пов’язка зникає, а порожнє місце заповнюється під час падіння краплинок. За кожну зняту пов’язку — 200 бонусних балів.</p>
+              <p class="hemocon-tutorial-note">Пов’язана клітинка блокує падіння та лінії, але її можна відкрити матчем поруч. Плазмовий вибух теж знімає пов’язки, які перетинає.</p>
+            </div>
+            <div class="bandage-demo-wrap" role="img" aria-label="Медична пов’язка закриває клітинку; лінія поруч знімає її">
+              <img src="assets/bandage-obstacle.png" alt="">
+              <p>Лінія поруч → пов’язку знято</p>
+            </div>
+          </div>
+          <button class="new-game start-game" id="bandageTutorialStart" type="button">Зрозуміло, граємо</button>
+        </section>
+      </div>
+
+      <div class="hemocon-tutorial-overlay" id="urgentCallTutorialOverlay" hidden>
+        <section class="hemocon-tutorial-card" role="dialog" aria-modal="true" aria-labelledby="urgentCallTutorialTitle">
+          <h1 id="urgentCallTutorialTitle">Нова механіка: терміновий виклик</h1>
+          <p class="hemocon-tutorial-lead">Починаючи з 3-го рівня, кожне проходження рівня матиме додаткове завдання з обмеженням ходів.</p>
+          <div class="hemocon-tutorial-copy">
+            <p><strong>Виконай виклик:</strong> за 12 ходів зроби два каскадні ходи. Каскад — це коли після лінії краплинки падають і самі утворюють наступну лінію.</p>
+            <p class="hemocon-tutorial-note"><strong>Нагорода:</strong> 500 бонусних балів. Якщо не встигнеш, штрафу не буде — основне завдання рівня продовжиться.</p>
+          </div>
+          <button class="new-game start-game" id="urgentCallTutorialStart" type="button">Зрозуміло, приймаю виклик</button>
+        </section>
+      </div>
 
       <div class="win-overlay" id="winOverlay" hidden>
         <section class="win-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+          <img class="final-trophy" id="finalTrophy" src="assets/blood-cup-trophy.png" alt="Кубок крові — нагорода за проходження десяти рівнів" hidden>
           <h1 id="winTitle">Рівень виконано!</h1>
           <p id="winMessage">Групу зібрано.</p>
+          <p class="donor-wish" id="donorWish"></p>
+          <label class="ticket-name-label" for="ticketName">Ім’я або псевдонім для квитка</label>
+          <input class="ticket-name-input" id="ticketName" type="text" maxlength="24" autocomplete="nickname" placeholder="Наприклад, Донор 2026">
+          <button class="ticket-button" id="createTicket" type="button">Завантажити PDF-білет</button>
+          <button class="ticket-button secondary" id="shareTicket" type="button" hidden>Поділитися квитком</button>
+          <p class="ticket-status" id="ticketStatus" role="status" aria-live="polite"></p>
           <button class="new-game" id="playAgain" type="button">Наступний рівень</button>
         </section>
       </div>
@@ -338,40 +1028,126 @@
   </main>
   <script>
     (() => {
-      const size = 8;
-      const levelGoals = [10, 20, 30, 40, 50];
-      const targetSpawnChance = 0.2;
+      const size = 6;
+      const targetDropChance = 0.30;
+      const refillAssistChances = { relaxed: 0.72, standard: 0.58, challenging: 0.44 };
+      const difficultyModes = Object.keys(refillAssistChances);
+      const donorWishes = [
+        "Дякуємо, що даруєте надію — ваша доброта має велику силу.",
+        "Нехай добро, яким ви ділитеся, повертається до вас сторицею.",
+        "Ваша готовність допомогти — справжній приклад людяності.",
+        "Краплина турботи від вас може стати великою підтримкою для когось.",
+        "Дякуємо за щедре серце й тепло, яким ви ділитеся.",
+        "Ваша доброта надихає інших робити добрі справи.",
+        "Нехай у вашому житті буде стільки ж турботи, скільки ви даруєте іншим.",
+        "Донорство починається з небайдужості. Дякуємо за ваше велике серце.",
+        "Ваш вчинок нагадує: разом ми можемо підтримати одне одного.",
+        "Дякуємо, що обираєте шлях милосердя та взаємодопомоги.",
+        "Хай кожен день приносить вам радість, яку ви даруєте іншим.",
+        "Ваша турбота — промінь надії для тих, кому потрібна підтримка.",
+        "Дякуємо, що знаходите сили бути поруч із тими, хто потребує допомоги.",
+        "Нехай добро, посіяне вами, розквітає навколо.",
+        "Ваше рішення допомогти — прояв відваги й щирого співчуття.",
+        "Дякуємо за щирість, небайдужість і бажання підтримати.",
+        "Світ стає теплішим завдяки людям, які не проходять повз.",
+        "Ваша участь дарує комусь важливу підтримку у складний час.",
+        "Нехай ваша доброта надихає, а серце відчуває вдячність.",
+        "Дякуємо, що додаєте більше людяності в цей світ.",
+        "Ви робите важливу справу — нехай навколо вас множиться добро.",
+        "Нехай ваша щедрість повертається світлими зустрічами й добрими новинами.",
+        "Дякуємо, що даруєте не лише кров, а й віру у взаємодопомогу.",
+        "Ваша небайдужість допомагає творити суспільство, де підтримують одне одного.",
+        "Турбота про інших починається з доброго рішення. Дякуємо за ваше.",
+        "Нехай вас завжди оточують люди, готові підтримати вас так само щиро, як ви підтримуєте інших.",
+        "Ви подаєте приклад, який надихає. Дякуємо за вашу людяність.",
+        "Щедрість вашого серця робить світ добрішим.",
+        "Дякуємо, що долучаєтеся до справи, у якій важлива кожна краплина.",
+        "Нехай у вашому житті буде багато світла — ви щедро ділитеся ним з іншими."
+      ];
+      const donorWishStorageKey = "blood-group-game-wish-deck";
+      const tutorialStorageKeys = {
+        wild: "blood-group-game-wild-tutorial-seen",
+        hemocon: "blood-group-game-hemocon-tutorial-seen",
+        plasma: "blood-group-game-plasma-tutorial-seen",
+        bandage: "blood-group-game-bandage-tutorial-seen",
+        urgentCall: "blood-group-game-urgent-call-tutorial-seen"
+      };
       const types = [
-        { id: "I+", name: "I+", image: "drop-i-plus.png", alt: "Перша позитивна" },
-        { id: "I−", name: "I−", image: "drop-i-minus.png", alt: "Перша негативна" },
-        { id: "II+", name: "II+", image: "drop-ii-plus.png", alt: "Друга позитивна" },
-        { id: "II−", name: "II−", image: "drop-ii-minus.png", alt: "Друга негативна" },
-        { id: "III+", name: "III+", image: "drop-iii-plus.png", alt: "Третя позитивна" },
-        { id: "III−", name: "III−", image: "drop-iii-minus.png", alt: "Третя негативна" },
-        { id: "IV+", name: "IV+", image: "drop-iv-plus.png", alt: "Четверта позитивна" },
-        { id: "IV−", name: "IV−", image: "drop-iv-minus.png", alt: "Четверта негативна" }
+        { id: "I+", name: "I+", image: "drop-i-plus.png", alt: "Перша позитивна", color: "#4fb9d4" },
+        { id: "I−", name: "I−", image: "drop-i-minus.png", alt: "Перша негативна", color: "#9a72d7" },
+        { id: "II+", name: "II+", image: "drop-ii-plus.png", alt: "Друга позитивна", color: "#6ebb69" },
+        { id: "II−", name: "II−", image: "drop-ii-minus.png", alt: "Друга негативна", color: "#e7a642" },
+        { id: "III+", name: "III+", image: "drop-iii-plus.png", alt: "Третя позитивна", color: "#e1748e" },
+        { id: "III−", name: "III−", image: "drop-iii-minus.png", alt: "Третя негативна", color: "#4c8ed6" },
+        { id: "IV+", name: "IV+", image: "drop-iv-plus.png", alt: "Четверта позитивна", color: "#c8b446" },
+        { id: "IV−", name: "IV−", image: "drop-iv-minus.png", alt: "Четверта негативна", color: "#57a8a2" }
       ];
       const imageFor = Object.fromEntries(types.map(type => [type.id, `assets/${type.image}`]));
       const boardElement = document.getElementById("board");
       const targetDrop = document.getElementById("targetDrop");
       const targetName = document.getElementById("targetName");
+      const targetDescription = document.querySelector(".target-description");
       const progressTrack = document.getElementById("progressTrack");
       const progressFill = document.getElementById("progressFill");
       const progressCount = document.getElementById("progressCount");
       const targetKicker = document.getElementById("targetKicker");
+      const urgentCallPanel = document.getElementById("urgentCallPanel");
+      const urgentCallStatus = document.getElementById("urgentCallStatus");
+      const wildOrderRules = document.getElementById("wildOrderRules");
+      const wildOrderDemo = document.getElementById("wildOrderDemo");
+      const wildOrderFirstDrop = document.getElementById("wildOrderFirstDrop");
+      const wildOrderSecondDrop = document.getElementById("wildOrderSecondDrop");
       const scoreElement = document.getElementById("score");
       const movesElement = document.getElementById("moves");
       const statusElement = document.getElementById("status");
       const winOverlay = document.getElementById("winOverlay");
+      const winCard = document.querySelector(".win-card");
+      const finalTrophy = document.getElementById("finalTrophy");
       const newGameButton = document.getElementById("newGame");
       const winTitle = document.getElementById("winTitle");
       const winMessage = document.getElementById("winMessage");
+      const donorWishElement = document.getElementById("donorWish");
       const playAgainButton = document.getElementById("playAgain");
+      const ticketNameInput = document.getElementById("ticketName");
+      const createTicketButton = document.getElementById("createTicket");
+      const shareTicketButton = document.getElementById("shareTicket");
+      const ticketStatus = document.getElementById("ticketStatus");
+      const introOverlay = document.getElementById("introOverlay");
+      const startGameButton = document.getElementById("startGame");
+      const hemoconTutorialOverlay = document.getElementById("hemoconTutorialOverlay");
+      const hemoconTutorialStartButton = document.getElementById("hemoconTutorialStart");
+      const wildTutorialOverlay = document.getElementById("wildTutorialOverlay");
+      const wildTutorialStartButton = document.getElementById("wildTutorialStart");
+      const plasmaTutorialOverlay = document.getElementById("plasmaTutorialOverlay");
+      const plasmaTutorialStartButton = document.getElementById("plasmaTutorialStart");
+      const bandageTutorialOverlay = document.getElementById("bandageTutorialOverlay");
+      const bandageTutorialStartButton = document.getElementById("bandageTutorialStart");
+      const urgentCallTutorialOverlay = document.getElementById("urgentCallTutorialOverlay");
+      const urgentCallTutorialStartButton = document.getElementById("urgentCallTutorialStart");
+      const hemoconDemoBoard = document.getElementById("hemoconDemoBoard");
+      const hemoconDemoBag = document.getElementById("hemoconDemoBag");
+      const hemoconDemoGroup = document.getElementById("hemoconDemoGroup");
+      const needleHelpButton = document.getElementById("needleHelp");
+      const syringeHelpButton = document.getElementById("syringeHelp");
+      const centrifugeHelpButton = document.getElementById("centrifugeHelp");
+      const powerupCosts = { needle: 200, syringe: 2000, centrifuge: 5000 };
+      const urgentCallGoal = 2;
+      const urgentCallMoveLimit = 12;
+      const urgentCallReward = 500;
       let cells = [];
+      let specials = [];
+      let bandages = Array(size * size).fill(false);
+      let hemocons = [];
       let level = 1;
       let target = types[0].id;
-      let goal = levelGoals[0];
+      let goal = 10;
       let collected = 0;
+      let orderTypes = [];
+      let orderGoals = [];
+      let orderIndex = 0;
+      let orderGoal = 10;
+      let orderCollected = 0;
+      let orderTransitionPending = false;
       let score = 0;
       let moves = 0;
       let selected = null;
@@ -379,78 +1155,357 @@
       let complete = false;
       let dragStart = null;
       let suppressClick = false;
+      let plasmaTap = null;
       let statusTimer = 0;
+      let hintTimer = 0;
+      let paidHintTimer = 0;
+      let currentDifficulty = "standard";
+      let activePowerup = null;
+      let syringeFirst = null;
+      let gameStarted = false;
+      let donorWishDeck = loadDonorWishDeck();
+      let createdTicketFile = null;
+      let tutorialSeen = loadSeenTutorials();
+      let urgentCall = { active: false, cascades: 0, startMove: 0, lastCascadeMove: -1, lastSettledMove: -1, state: "inactive", notice: "" };
 
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
       const randomTarget = () => types[Math.floor(Math.random() * types.length)].id;
+      const randomDifficulty = () => difficultyModes[Math.floor(Math.random() * difficultyModes.length)];
+      function prepareLevelOrders() {
+        const first = randomTarget();
+        orderTypes = [first];
+        if (level >= 2) {
+          const alternatives = types.filter(type => type.id !== first);
+          orderTypes.push(alternatives[Math.floor(Math.random() * alternatives.length)].id);
+        }
+        orderGoals = orderTypes.length > 1 ? [Math.floor(goal / 2), Math.ceil(goal / 2)] : [goal];
+        orderIndex = 0;
+        orderGoal = orderGoals[0];
+        orderCollected = 0;
+        orderTransitionPending = false;
+        target = orderTypes[0];
+      }
+      function addObjectiveProgress(amount) {
+        const earned = Math.min(Math.max(0, amount), Math.max(0, orderGoal - orderCollected));
+        if (!earned) return 0;
+        orderCollected += earned;
+        collected += earned;
+        if (orderCollected >= orderGoal && orderIndex < orderTypes.length - 1) {
+          orderIndex++;
+          target = orderTypes[orderIndex];
+          orderGoal = orderGoals[orderIndex];
+          orderCollected = 0;
+          orderTransitionPending = true;
+        }
+        return earned;
+      }
+      function loadDonorWishDeck() {
+        try {
+          const savedDeck = JSON.parse(localStorage.getItem(donorWishStorageKey));
+          if (Array.isArray(savedDeck) && savedDeck.every(index => Number.isInteger(index) && index >= 0 && index < donorWishes.length) && new Set(savedDeck).size === savedDeck.length) return savedDeck;
+        } catch {}
+        return [];
+      }
+      function loadSeenTutorials() {
+        const seen = {};
+        for (const [name, key] of Object.entries(tutorialStorageKeys)) {
+          try { seen[name] = localStorage.getItem(key) === "yes"; }
+          catch { seen[name] = false; }
+        }
+        return seen;
+      }
+      function rememberTutorialSeen(name) {
+        tutorialSeen[name] = true;
+        try { localStorage.setItem(tutorialStorageKeys[name], "yes"); }
+        catch {}
+      }
+      function updateUrgentCallHud() {
+        const visible = level >= 3 && urgentCall.state !== "inactive";
+        urgentCallPanel.hidden = !visible;
+        urgentCallPanel.classList.toggle("success", urgentCall.state === "success");
+        urgentCallPanel.classList.toggle("failed", urgentCall.state === "failed");
+        if (!visible) return;
+        if (urgentCall.state === "active") {
+          const used = Math.max(0, moves - urgentCall.startMove);
+          const remaining = Math.max(0, urgentCallMoveLimit - used);
+          urgentCallStatus.textContent = `Каскади ${urgentCall.cascades}/${urgentCallGoal} · ходів ${remaining} · +${urgentCallReward} балів`;
+        } else if (urgentCall.state === "success") {
+          urgentCallStatus.textContent = `Виконано! +${urgentCallReward} бонусних балів.`;
+        } else {
+          urgentCallStatus.textContent = "Час минув — основне завдання рівня триває без штрафу.";
+        }
+      }
+      function recordUrgentCallCascade() {
+        if (!urgentCall.active || urgentCall.lastCascadeMove === moves) return;
+        urgentCall.lastCascadeMove = moves;
+        urgentCall.cascades++;
+        if (urgentCall.cascades >= urgentCallGoal) {
+          urgentCall.active = false;
+          urgentCall.state = "success";
+          score += urgentCallReward;
+          urgentCall.notice = `Терміновий виклик виконано! +${urgentCallReward} бонусних балів.`;
+        }
+        updateUrgentCallHud();
+      }
+      function settleUrgentCallMove() {
+        if (urgentCall.lastSettledMove === moves) return;
+        urgentCall.lastSettledMove = moves;
+        if (urgentCall.active && moves > urgentCall.startMove && moves - urgentCall.startMove >= urgentCallMoveLimit) {
+          urgentCall.active = false;
+          urgentCall.state = "failed";
+          urgentCall.notice = "Терміновий виклик завершився — основне завдання рівня триває без штрафу.";
+        }
+        updateUrgentCallHud();
+        if (urgentCall.notice) {
+          showStatus(urgentCall.notice);
+          urgentCall.notice = "";
+        }
+      }
+      function renderHemoconTutorialIllustration() {
+        const demoType = types[0];
+        hemoconDemoGroup.textContent = demoType.id;
+        hemoconDemoBag.style.setProperty("--demo-hemocon-color", demoType.color);
+        const arrows = hemoconDemoBoard.querySelector(".hemocon-demo-arrows");
+        const bag = hemoconDemoBoard.querySelector(".hemocon-demo-bag");
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < size * size; index++) {
+          const type = index === 0 ? demoType : types[(index * 3 + 1) % types.length];
+          const cell = document.createElement("div");
+          cell.className = `hemocon-demo-cell${index === 0 ? " remote-drop" : ""}`;
+          cell.style.setProperty("--demo-drop-color", type.color);
+          const drop = document.createElement("img");
+          drop.src = imageFor[type.id];
+          drop.alt = "";
+          cell.append(drop);
+          fragment.append(cell);
+        }
+        fragment.append(arrows, bag);
+        hemoconDemoBoard.replaceChildren(fragment);
+      }
+      function shuffledDonorWishDeck() {
+        const deck = donorWishes.map((_, index) => index);
+        for (let index = deck.length - 1; index > 0; index--) {
+          const other = Math.floor(Math.random() * (index + 1));
+          [deck[index], deck[other]] = [deck[other], deck[index]];
+        }
+        return deck;
+      }
+      function nextDonorWish() {
+        if (!donorWishDeck.length) donorWishDeck = shuffledDonorWishDeck();
+        const wish = donorWishes[donorWishDeck.pop()];
+        try {
+          localStorage.setItem(donorWishStorageKey, JSON.stringify(donorWishDeck));
+        } catch {}
+        return wish;
+      }
       function randomType(choices = types) {
         const availableTarget = choices.some(type => type.id === target);
-        if (availableTarget && Math.random() < targetSpawnChance) return target;
+        if (availableTarget && Math.random() < targetDropChance) return target;
         const alternatives = availableTarget ? choices.filter(type => type.id !== target) : choices;
         const pool = alternatives.length ? alternatives : choices;
         return pool[Math.floor(Math.random() * pool.length)].id;
       }
       const coords = index => [Math.floor(index / size), index % size];
+      const isHemoconCell = index => {
+        const [row, col] = coords(index);
+        return hemocons.some(item => row >= item.row && row < item.row + 2 && col >= item.col && col < item.col + 2);
+      };
+      const isFixedObstacleCell = index => isHemoconCell(index) || bandages[index];
       const isAdjacent = (a, b) => {
         const [ar, ac] = coords(a);
         const [br, bc] = coords(b);
         return Math.abs(ar - br) + Math.abs(ac - bc) === 1;
       };
 
+      function spawnHemocons() {
+        hemocons = [];
+        if (level < 3) return;
+        hemocons.push({
+          row: Math.floor(Math.random() * (size - 1)),
+          col: Math.floor(Math.random() * (size - 1)),
+          type: randomTarget(),
+          fill: 0,
+          complete: false
+        });
+      }
+
+      function getHemoconProjectionIndices(hemocon) {
+        const projected = [];
+        for (let row = 0; row < size; row++) {
+          for (let col = 0; col < size; col++) {
+            const verticalProjection = (col === hemocon.col || col === hemocon.col + 1)
+              && (row < hemocon.row || row >= hemocon.row + 2);
+            const horizontalProjection = (row === hemocon.row || row === hemocon.row + 1)
+              && (col < hemocon.col || col >= hemocon.col + 2);
+            const index = row * size + col;
+            if ((verticalProjection || horizontalProjection) && cells[index] !== null) projected.push(index);
+          }
+        }
+        return projected;
+      }
+
+      function hemoconProjectionDistance(index, hemocon) {
+        const [row, col] = coords(index);
+        if (col === hemocon.col || col === hemocon.col + 1) {
+          return row < hemocon.row ? hemocon.row - row : row - (hemocon.row + 1);
+        }
+        return col < hemocon.col ? hemocon.col - col : col - (hemocon.col + 1);
+      }
+
       function findMatches() {
         const matched = new Set();
-        for (let row = 0; row < size; row++) {
-          let start = 0;
-          for (let col = 1; col <= size; col++) {
-            const current = col < size ? cells[row * size + col] : null;
-            const previous = cells[row * size + col - 1];
-            if (current !== previous) {
-              if (previous && col - start >= 3) {
-                for (let x = start; x < col; x++) matched.add(row * size + x);
-              }
-              start = col;
-            }
-          }
-        }
-        for (let col = 0; col < size; col++) {
-          let start = 0;
-          for (let row = 1; row <= size; row++) {
-            const current = row < size ? cells[row * size + col] : null;
-            const previous = cells[(row - 1) * size + col];
-            if (current !== previous) {
-              if (previous && row - start >= 3) {
-                for (let y = start; y < row; y++) matched.add(y * size + col);
-              }
-              start = row;
-            }
-          }
-        }
+        for (const run of findMatchRuns()) for (const index of run.indices) matched.add(index);
         return matched;
       }
 
-      function hasPossibleMove() {
+      function findMatchRuns() {
+        const runs = [];
+        const inspectLine = (indices, axis) => {
+          for (const type of types.map(item => item.id)) {
+            let start = 0;
+            for (let position = 0; position <= indices.length; position++) {
+              const index = indices[position];
+              const compatible = position < indices.length && cells[index] !== null
+                && specials[index]?.kind !== "plasma"
+                && (cells[index] === type || specials[index]?.kind === "wild");
+              if (!compatible) {
+                const segment = indices.slice(start, position);
+                if (segment.length >= 3 && segment.some(cellIndex => cells[cellIndex] === type)) {
+                  runs.push({ axis, type, indices: segment });
+                }
+                start = position + 1;
+              }
+            }
+          }
+        };
+
+        for (let row = 0; row < size; row++) {
+          inspectLine(Array.from({ length: size }, (_, col) => row * size + col), "row");
+        }
+        for (let col = 0; col < size; col++) {
+          inspectLine(Array.from({ length: size }, (_, row) => row * size + col), "column");
+        }
+        return runs;
+      }
+
+      function findHintMove() {
         for (let index = 0; index < cells.length; index++) {
+          if (cells[index] === null) continue;
           const neighbors = [];
           if (index % size < size - 1) neighbors.push(index + 1);
           if (index < size * (size - 1)) neighbors.push(index + size);
           for (const other of neighbors) {
+            if (cells[other] === null) continue;
             [cells[index], cells[other]] = [cells[other], cells[index]];
+            [specials[index], specials[other]] = [specials[other], specials[index]];
             const possible = findMatches().size > 0;
             [cells[index], cells[other]] = [cells[other], cells[index]];
-            if (possible) return true;
+            [specials[index], specials[other]] = [specials[other], specials[index]];
+            if (possible) return [index, other];
           }
         }
-        return false;
+        return null;
+      }
+
+      function hasPossibleMove() {
+        return findHintMove() !== null || specials.some(special => special?.kind === "plasma");
+      }
+
+      function bandagesAdjacentTo(indices) {
+        const hit = new Set();
+        for (const index of indices) {
+          const [row, col] = coords(index);
+          const neighbors = [];
+          if (row > 0) neighbors.push(index - size);
+          if (row < size - 1) neighbors.push(index + size);
+          if (col > 0) neighbors.push(index - 1);
+          if (col < size - 1) neighbors.push(index + 1);
+          for (const neighbor of neighbors) if (bandages[neighbor]) hit.add(neighbor);
+        }
+        return hit;
+      }
+
+      function seedRefillMatch(refillCells) {
+        if (Math.random() >= refillAssistChances[currentDifficulty] || findMatches().size) return false;
+        const freshCells = new Set(refillCells);
+        const candidates = [];
+        const considerLine = indices => {
+          const fresh = indices.filter(index => freshCells.has(index));
+          const settled = indices.filter(index => !freshCells.has(index));
+          if (fresh.length !== 1 || settled.length !== 2) return;
+          if (indices.some(index => specials[index]?.kind === "plasma" || isFixedObstacleCell(index))) return;
+          const first = cells[settled[0]];
+          const second = cells[settled[1]];
+          if (first && first === second) candidates.push({ index: fresh[0], type: first });
+        };
+
+        for (let row = 0; row < size; row++) {
+          for (let col = 0; col <= size - 3; col++) {
+            considerLine([row * size + col, row * size + col + 1, row * size + col + 2]);
+          }
+        }
+        for (let col = 0; col < size; col++) {
+          for (let row = 0; row <= size - 3; row++) {
+            considerLine([row * size + col, (row + 1) * size + col, (row + 2) * size + col]);
+          }
+        }
+        if (!candidates.length) return false;
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        cells[chosen.index] = chosen.type;
+        return true;
+      }
+
+      function refillBoardColumns() {
+        const refillCells = [];
+        for (let col = 0; col < size; col++) {
+          let segmentStart = 0;
+          while (segmentStart < size) {
+            if (isFixedObstacleCell(segmentStart * size + col)) {
+              segmentStart++;
+              continue;
+            }
+            let segmentEnd = segmentStart;
+            while (segmentEnd < size && !isFixedObstacleCell(segmentEnd * size + col)) segmentEnd++;
+            let destination = segmentEnd - 1;
+            for (let row = segmentEnd - 1; row >= segmentStart; row--) {
+              const index = row * size + col;
+              if (cells[index] !== null) {
+                const destinationIndex = destination * size + col;
+                if (destinationIndex !== index) {
+                  cells[destinationIndex] = cells[index];
+                  specials[destinationIndex] = specials[index];
+                  cells[index] = null;
+                  specials[index] = null;
+                }
+                destination--;
+              }
+            }
+            for (let row = destination; row >= segmentStart; row--) {
+              const index = row * size + col;
+              cells[index] = randomType();
+              specials[index] = null;
+              refillCells.push(index);
+            }
+            segmentStart = segmentEnd;
+          }
+        }
+        return refillCells;
       }
 
       function makeBoard() {
+        specials = Array(size * size).fill(null);
         for (let attempt = 0; attempt < 500; attempt++) {
           const next = [];
           for (let row = 0; row < size; row++) {
             for (let col = 0; col < size; col++) {
+              const index = row * size + col;
+              if (isFixedObstacleCell(index)) {
+                next.push(null);
+                continue;
+              }
               const excluded = new Set();
-              if (col >= 2 && next[row * size + col - 1] === next[row * size + col - 2]) excluded.add(next[row * size + col - 1]);
-              if (row >= 2 && next[(row - 1) * size + col] === next[(row - 2) * size + col]) excluded.add(next[(row - 1) * size + col]);
+              if (col >= 2 && next[index - 1] && next[index - 1] === next[index - 2]) excluded.add(next[index - 1]);
+              if (row >= 2 && next[index - size] && next[index - size] === next[index - size * 2]) excluded.add(next[index - size]);
               const choices = types.filter(type => !excluded.has(type.id));
               next.push(randomType(choices));
             }
@@ -458,117 +1513,921 @@
           cells = next;
           if (hasPossibleMove()) return;
         }
-        cells = Array.from({ length: size * size }, (_, index) => types[(index + Math.floor(index / size)) % types.length].id);
+        cells = Array.from({ length: size * size }, (_, index) => isFixedObstacleCell(index) ? null : types[(index + Math.floor(index / size)) % types.length].id);
       }
 
-      function renderBoard(clear = new Set()) {
+      function bandageCountForLevel() {
+        if (level < 5) return 0;
+        return 3 + Math.floor(Math.random() * 2);
+      }
+
+      function placeLevelFiveBandages() {
+        bandages.fill(false);
+        const desiredCount = bandageCountForLevel();
+        if (!desiredCount) return 0;
+        const originalCells = [...cells];
+        for (let attempt = 0; attempt < 12; attempt++) {
+          bandages.fill(false);
+          cells = [...originalCells];
+          const candidates = cells.map((type, index) => type === null || specials[index] ? -1 : index).filter(index => index >= 0);
+          for (let index = candidates.length - 1; index > 0; index--) {
+            const other = Math.floor(Math.random() * (index + 1));
+            [candidates[index], candidates[other]] = [candidates[other], candidates[index]];
+          }
+          let placed = 0;
+          for (const index of candidates) {
+            if (placed >= desiredCount) break;
+            const original = cells[index];
+            bandages[index] = true;
+            cells[index] = null;
+            if (!findMatches().size && findHintMove()) {
+              placed++;
+            } else {
+              bandages[index] = false;
+              cells[index] = original;
+            }
+          }
+          if (placed >= 3) return placed;
+        }
+
+        // Keep the requested minimum even on an unusually constrained board.
+        bandages.fill(false);
+        cells = [...originalCells];
+        const fallback = cells.map((type, index) => type === null || specials[index] ? -1 : index).filter(index => index >= 0);
+        for (let index = fallback.length - 1; index > 0; index--) {
+          const other = Math.floor(Math.random() * (index + 1));
+          [fallback[index], fallback[other]] = [fallback[other], fallback[index]];
+        }
+        for (const index of fallback.slice(0, desiredCount)) {
+          bandages[index] = true;
+          cells[index] = null;
+        }
+        if (!findHintMove()) makeBoard();
+        return Math.min(desiredCount, fallback.length);
+      }
+
+      function placeLevelTwoWild() {
+        if (level !== 2) return;
+        placeWildAtRandomValidCell();
+      }
+
+      function placeLevelFourPlasma() {
+        if (level < 4) return;
+        placeSpecialAtRandomValidCell({ kind: "plasma" });
+      }
+
+      function placeSpecialAtRandomValidCell(special) {
+        const candidates = cells.map((type, index) => type === null || specials[index] ? -1 : index).filter(index => index >= 0);
+        for (let index = candidates.length - 1; index > 0; index--) {
+          const other = Math.floor(Math.random() * (index + 1));
+          [candidates[index], candidates[other]] = [candidates[other], candidates[index]];
+        }
+        for (const index of candidates) {
+          specials[index] = special;
+          if (!findMatches().size) return true;
+          specials[index] = null;
+        }
+        return false;
+      }
+
+      function placeWildAtRandomValidCell() {
+        return placeSpecialAtRandomValidCell({ kind: "wild" });
+      }
+
+      function renderBoard(clear = new Set(), falling = new Set()) {
         const fragment = document.createDocumentFragment();
+        const firstOpenCell = cells.findIndex(type => type !== null);
         cells.forEach((type, index) => {
           const tile = document.createElement("button");
           tile.type = "button";
           tile.className = "tile";
+          if (type === null) {
+            tile.disabled = true;
+            tile.tabIndex = -1;
+            if (bandages[index]) {
+              tile.classList.add("bandaged");
+              tile.style.setProperty("--drop-color", "#d8b99b");
+              tile.setAttribute("aria-label", `Клітинка закрита медичною пов’язкою, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}. Зніми її лінією поруч.`);
+              const image = document.createElement("img");
+              image.src = "assets/bandage-obstacle.png";
+              image.alt = "Медична пов’язка";
+              image.draggable = false;
+              tile.append(image);
+            } else {
+              tile.classList.add("blocked");
+              tile.setAttribute("aria-label", "Клітинка зайнята гемоконом");
+            }
+          } else {
+            const isWild = specials[index]?.kind === "wild";
+            const isPlasma = specials[index]?.kind === "plasma";
+            if (isWild) {
+              tile.classList.add("special-wild");
+              tile.setAttribute("aria-label", `Універсальна крапля — підходить до будь-якої групи, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
+            } else if (isPlasma) {
+              tile.classList.add("special-plasma");
+              tile.style.setProperty("--drop-color", "#ffbd4b");
+              tile.setAttribute("aria-label", `Плазмова крапля без групи крові — двічі натисни, щоб очистити рядок і стовпець, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
+            } else {
+              tile.style.setProperty("--drop-color", types.find(item => item.id === type).color);
+              tile.setAttribute("aria-label", `Краплинка ${type}, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
+            }
+            tile.tabIndex = selected === null ? (index === firstOpenCell ? 0 : -1) : (selected === index ? 0 : -1);
+            if (!isWild && !isPlasma) {
+              const image = document.createElement("img");
+              image.src = imageFor[type];
+              image.alt = `Група ${type}`;
+              image.draggable = false;
+              tile.append(image);
+            } else if (isWild || isPlasma) {
+              const emblem = document.createElement("img");
+              emblem.className = "special-emblem";
+              emblem.src = isWild ? "assets/special-wild.png" : "assets/special-plasma.png";
+              emblem.alt = isWild ? "Універсальна крапля" : "Плазмова крапля";
+              emblem.draggable = false;
+              tile.append(emblem);
+            }
+          }
           if (selected === index && !busy) tile.classList.add("selected");
+          if (syringeFirst === index && activePowerup === "syringe") tile.classList.add("powerup-selected");
           if (clear.has(index)) tile.classList.add("clearing");
+          if (falling.has(index)) {
+            tile.classList.add("falling");
+            tile.style.setProperty("--fall-delay", `${Math.floor(index / size) * 18}ms`);
+          }
+          if (boardElement.classList.contains("shuffle-arrival") && type !== null) {
+            tile.classList.add("shuffle-in");
+            tile.style.setProperty("--shuffle-delay", `${Math.floor(index / size) * 18 + index % size * 6}ms`);
+          }
           tile.dataset.index = String(index);
           tile.setAttribute("role", "gridcell");
-          tile.setAttribute("aria-label", `Краплинка ${type}, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
           tile.setAttribute("aria-selected", String(selected === index));
-          tile.tabIndex = selected === null ? (index === 0 ? 0 : -1) : (selected === index ? 0 : -1);
-          const image = document.createElement("img");
-          image.src = imageFor[type];
-          image.alt = `Група ${type}`;
-          image.draggable = false;
-          tile.append(image);
           fragment.append(tile);
         });
+        for (const hemocon of hemocons) {
+          const visual = document.createElement("div");
+          visual.className = `hemocon${hemocon.ready ? " ready" : ""}${hemocon.complete ? " complete" : ""}`;
+          if (!busy && selected !== null && cells[selected] === hemocon.type) visual.classList.add("accepting");
+          visual.style.gridColumn = `${hemocon.col + 1} / span 2`;
+          visual.style.gridRow = `${hemocon.row + 1} / span 2`;
+          visual.style.setProperty("--hemocon-color", types.find(item => item.id === hemocon.type).color);
+          visual.style.setProperty("--fill-height", `${hemocon.fill * 5.8}%`);
+          visual.dataset.hemoconIndex = String(hemocons.indexOf(hemocon));
+          visual.setAttribute("role", "button");
+          visual.tabIndex = busy || complete || activePowerup ? -1 : 0;
+          visual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10${hemocon.ready ? ", очікує завершення каскадів" : ""}`);
+
+          const backing = document.createElement("div");
+          backing.className = "hemocon-backing";
+          const fluid = document.createElement("div");
+          fluid.className = "hemocon-fluid";
+          const shell = document.createElement("img");
+          shell.className = "hemocon-shell";
+          shell.src = "assets/hemocon-shell.png";
+          shell.alt = "";
+          const label = document.createElement("div");
+          label.className = "hemocon-label";
+          const group = document.createElement("strong");
+          group.textContent = hemocon.type;
+          const count = document.createElement("span");
+          count.textContent = `${hemocon.fill} / 10`;
+          label.append(group, count);
+          visual.append(backing, fluid, shell, label);
+          fragment.append(visual);
+        }
         boardElement.replaceChildren(fragment);
+      }
+
+      async function transferDropToHemocon(dropIndex, hemoconIndex) {
+        const hemocon = hemocons[hemoconIndex];
+        if (!gameStarted || busy || complete || activePowerup || !hemocon || cells[dropIndex] === null) return;
+        if (specials[dropIndex]?.kind === "plasma") {
+          showStatus("У плазмової краплі немає групи крові — двічі натисни на неї, щоб підірвати.");
+          return;
+        }
+        if (cells[dropIndex] !== hemocon.type) {
+          showStatus(`Гемокон приймає лише групу ${hemocon.type}.`);
+          return;
+        }
+
+        clearHint();
+        busy = true;
+        selected = null;
+        moves++;
+        const source = boardElement.querySelector(`.tile[data-index="${dropIndex}"]`);
+        const visual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
+        if (source && visual && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          const sourceRect = source.getBoundingClientRect();
+          const targetRect = visual.getBoundingClientRect();
+          source.style.setProperty("--fly-x", `${targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2)}px`);
+          source.style.setProperty("--fly-y", `${targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2)}px`);
+          source.classList.add("transferring");
+          visual.classList.add("absorbing");
+        }
+        updateHud();
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
+
+        cells[dropIndex] = null;
+        specials[dropIndex] = null;
+        hemocon.fill++;
+        const liveVisual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
+        if (liveVisual) {
+          liveVisual.style.setProperty("--fill-height", `${hemocon.fill * 5.8}%`);
+          liveVisual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10`);
+          const count = liveVisual.querySelector(".hemocon-label span");
+          if (count) count.textContent = `${hemocon.fill} / 10`;
+        }
+
+        const completed = hemocon.fill >= 10;
+        if (completed) {
+          hemocon.ready = true;
+          liveVisual?.classList.add("ready");
+          liveVisual?.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на 10 з 10, очікує завершення каскадів`);
+          showStatus("Гемокон заповнений — дочекайся завершення всіх каскадів.");
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
+        } else {
+          showStatus(`Гемокон ${hemocon.type}: ${hemocon.fill} з 10 крапель.`);
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
+        }
+
+        const refillCells = refillBoardColumns();
+        selected = null;
+        renderBoard(new Set(), new Set(refillCells));
+        updateHud();
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
+        await resolveBoard();
+      }
+
+      async function activateReadyHemocon(hemocon) {
+        const projectedCells = getHemoconProjectionIndices(hemocon);
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const hemoconIndex = hemocons.indexOf(hemocon);
+        const liveVisual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
+        let maxProjectionDelay = 0;
+        liveVisual?.classList.add("projecting");
+        for (const index of projectedCells) {
+          const tile = boardElement.querySelector(`.tile[data-index="${index}"]`);
+          if (!tile) continue;
+          const delay = hemoconProjectionDistance(index, hemocon) * 22;
+          maxProjectionDelay = Math.max(maxProjectionDelay, delay);
+          tile.style.setProperty("--projection-delay", `${delay}ms`);
+          tile.classList.add("hemocon-transforming");
+        }
+        showStatus("Усі каскади завершено — гемокон перетворює проєкції!");
+        await wait(reduceMotion ? 0 : maxProjectionDelay + 440);
+
+        for (const index of projectedCells) cells[index] = hemocon.type;
+        hemocon.ready = false;
+        hemocon.complete = true;
+        score += 1000;
+        const objectiveBonus = hemocon.type === target ? addObjectiveProgress(10) : 0;
+        renderBoard();
+        updateHud();
+        showStatus(`Проєкції перетворено! +1 000 балів${objectiveBonus ? ` і +${objectiveBonus} до замовлення` : ""}.`);
+        await wait(reduceMotion ? 0 : 340);
+
+        hemocons = hemocons.filter(item => item !== hemocon);
+        const refillCells = refillBoardColumns();
+        renderBoard(new Set(), new Set(refillCells));
+        updateHud();
+        await wait(reduceMotion ? 0 : 340);
+      }
+
+      function clearHint() {
+        clearTimeout(hintTimer);
+        clearTimeout(paidHintTimer);
+        hintTimer = 0;
+        paidHintTimer = 0;
+        boardElement.querySelectorAll(".tile.hint").forEach(tile => tile.classList.remove("hint"));
+      }
+
+      function resetHintTimer() {
+        clearHint();
+        if (!gameStarted || busy || complete || activePowerup || !cells.length) return;
+        hintTimer = setTimeout(() => {
+          hintTimer = 0;
+          if (busy || complete) return;
+          const move = findHintMove();
+          if (move) move.forEach(index => boardElement.children[index]?.classList.add("hint"));
+        }, 15000);
       }
 
       function updateHud() {
         const type = types.find(item => item.id === target);
-        targetKicker.textContent = `Рівень ${level} із ${levelGoals.length} · ціль`;
+        targetKicker.textContent = orderTypes.length > 1
+          ? `Рівень ${level} · замовлення ${orderIndex + 1}/${orderTypes.length}`
+          : `Рівень ${level} · ціль`;
         targetDrop.src = imageFor[target];
         targetDrop.alt = `Краплинка групи ${target}`;
+        targetDrop.style.setProperty("--drop-color", type.color);
         targetName.textContent = target;
-        progressCount.textContent = `${Math.min(collected, goal)} / ${goal}`;
+        targetDescription.textContent = orderTypes.length > 1
+          ? (orderIndex < orderTypes.length - 1 ? `Після цього: ${orderTypes[orderIndex + 1]}` : "Фінальне замовлення")
+          : "Збери краплинки цієї групи";
+        progressCount.textContent = orderTypes.length > 1
+          ? `${orderIndex + 1}/${orderTypes.length} · ${Math.min(orderCollected, orderGoal)}/${orderGoal}`
+          : `${Math.min(collected, goal)} / ${goal}`;
         progressFill.style.width = `${Math.min(100, collected / goal * 100)}%`;
         progressTrack.setAttribute("aria-valuemax", String(goal));
         progressTrack.setAttribute("aria-valuenow", String(Math.min(collected, goal)));
         scoreElement.textContent = score.toLocaleString("uk-UA");
         movesElement.textContent = String(moves);
-        newGameButton.disabled = busy;
+        updateUrgentCallHud();
+        newGameButton.disabled = busy || !gameStarted;
+        const helpState = [
+          [needleHelpButton, "needle"],
+          [syringeHelpButton, "syringe"],
+          [centrifugeHelpButton, "centrifuge"]
+        ];
+        for (const [button, key] of helpState) {
+          const armed = activePowerup === key;
+          button.disabled = !gameStarted || busy || complete || (activePowerup && !armed);
+          button.classList.toggle("unaffordable", score < powerupCosts[key] && !armed);
+          button.classList.toggle("armed", armed);
+          button.setAttribute("aria-pressed", String(armed));
+        }
         if (type) targetName.setAttribute("aria-label", `${type.alt}, група ${type.id}`);
       }
 
       function showStatus(message) {
         statusElement.textContent = message;
+        statusElement.classList.remove("combo");
         statusElement.classList.add("visible");
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => statusElement.classList.remove("visible"), 1700);
       }
 
-      function showWin() {
-        complete = true;
-        const finalLevel = level === levelGoals.length;
-        winTitle.textContent = finalLevel ? "Усі 5 рівнів пройдено!" : `Рівень ${level} пройдено!`;
-        winMessage.textContent = `Зібрано ${goal} краплинок групи ${target}. Рахунок: ${score.toLocaleString("uk-UA")}.`;
-        playAgainButton.textContent = finalLevel ? "Нова гра" : "Наступний рівень";
-        winOverlay.hidden = false;
-        playAgainButton.focus();
+      function showCombo(cascade, points) {
+        statusElement.textContent = `${cascade > 1 ? `КОМБО ×${cascade}!` : "Є ЛІНІЯ!"} +${points.toLocaleString("uk-UA")} балів`;
+        statusElement.classList.add("visible", "combo");
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => statusElement.classList.remove("visible", "combo"), 1300);
       }
 
-      async function resolveBoard() {
-        let cascade = 0;
-        while (cascade < 30) {
-          const matches = findMatches();
-          if (!matches.size) break;
-          cascade++;
-          const targetMatches = [...matches].filter(index => cells[index] === target).length;
-          collected += targetMatches;
-          score += matches.size * 60 * cascade;
-          updateHud();
-          renderBoard(matches);
-          await wait(180);
-          for (const index of matches) cells[index] = null;
-          for (let col = 0; col < size; col++) {
-            let destination = size - 1;
-            for (let row = size - 1; row >= 0; row--) {
-              const index = row * size + col;
-              if (cells[index] !== null) {
-                cells[destination * size + col] = cells[index];
-                if (destination !== row) cells[index] = null;
-                destination--;
-              }
-            }
-            for (let row = destination; row >= 0; row--) cells[row * size + col] = randomType();
-          }
-          selected = null;
-          renderBoard();
-          await wait(135);
+      function canBuyPowerup(key) {
+        if (score >= powerupCosts[key]) return true;
+        showStatus(`Для цієї допомоги потрібно ${powerupCosts[key].toLocaleString("uk-UA")} балів.`);
+        return false;
+      }
+
+      function useNeedle() {
+        if (!gameStarted || busy || complete || activePowerup) return;
+        if (!canBuyPowerup("needle")) return;
+        const move = findHintMove();
+        if (!move) {
+          showStatus("Підказки немає — поле буде перемішано після наступного ходу.");
+          return;
         }
-        if (cascade >= 30) makeBoard();
-        busy = false;
+        clearHint();
+        score -= powerupCosts.needle;
+        updateHud();
+        move.forEach(index => boardElement.children[index]?.classList.add("hint"));
+        showStatus("Голочка підсвітила можливий хід.");
+        paidHintTimer = setTimeout(() => {
+          paidHintTimer = 0;
+          boardElement.querySelectorAll(".tile.hint").forEach(tile => tile.classList.remove("hint"));
+          resetHintTimer();
+        }, 4500);
+      }
+
+      function toggleSyringe() {
+        if (!gameStarted || busy || complete) return;
+        if (activePowerup === "syringe") {
+          activePowerup = null;
+          syringeFirst = null;
+          renderBoard();
+          updateHud();
+          showStatus("Обмін скасовано — бали не списано.");
+          resetHintTimer();
+          return;
+        }
+        if (activePowerup || !canBuyPowerup("syringe")) return;
+        clearHint();
+        selected = null;
+        activePowerup = "syringe";
+        syringeFirst = null;
         renderBoard();
         updateHud();
+        showStatus("Обери першу краплинку для обміну.");
+      }
+
+      async function useSyringeSwap(first, second) {
+        if (busy || complete || first === second || cells[first] === null || cells[second] === null || score < powerupCosts.syringe) return;
+        clearHint();
+        activePowerup = null;
+        syringeFirst = null;
+        selected = null;
+        [cells[first], cells[second]] = [cells[second], cells[first]];
+        [specials[first], specials[second]] = [specials[second], specials[first]];
+        score -= powerupCosts.syringe;
+        moves++;
+        busy = true;
+        renderBoard();
+        updateHud();
+        showStatus("Шприц поміняв краплинки місцями.");
+        await wait(120);
+        await resolveBoard();
+      }
+
+      async function useCentrifuge() {
+        if (!gameStarted || busy || complete || activePowerup || !canBuyPowerup("centrifuge")) return;
+        clearHint();
+        selected = null;
+        const order = [target, ...types.map(type => type.id).filter(id => id !== target)];
+        const rank = new Map(order.map((id, index) => [id, index]));
+        const openCells = cells.map((type, index) => type === null || specials[index]?.kind === "plasma" ? -1 : index).filter(index => index >= 0);
+        const drops = openCells.map(index => ({ type: cells[index], special: specials[index] }))
+          .sort((first, second) => rank.get(first.type) - rank.get(second.type));
+        openCells.forEach((index, position) => {
+          cells[index] = drops[position].type;
+          specials[index] = drops[position].special;
+        });
+        score -= powerupCosts.centrifuge;
+        moves++;
+        busy = true;
+        renderBoard();
+        updateHud();
+        showStatus("Центрифуга згрупувала однакові краплинки.");
+        await wait(250);
+        await resolveBoard();
+      }
+
+      function loadTicketImage(source) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error(`Не вдалося завантажити зображення: ${source}`));
+          image.src = source;
+        });
+      }
+
+      function drawRoundedRect(context, x, y, width, height, radius) {
+        context.beginPath();
+        const r = Math.min(radius, width / 2, height / 2);
+        context.moveTo(x + r, y);
+        context.lineTo(x + width - r, y);
+        context.arcTo(x + width, y, x + width, y + r, r);
+        context.lineTo(x + width, y + height - r);
+        context.arcTo(x + width, y + height, x + width - r, y + height, r);
+        context.lineTo(x + r, y + height);
+        context.arcTo(x, y + height, x, y + height - r, r);
+        context.lineTo(x, y + r);
+        context.arcTo(x, y, x + r, y, r);
+        context.closePath();
+      }
+
+      function drawContainedImage(context, image, x, y, width, height) {
+        const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+        const drawWidth = image.naturalWidth * scale;
+        const drawHeight = image.naturalHeight * scale;
+        context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+      }
+
+      function wrapTicketText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+        const words = text.split(/\s+/);
+        const lines = [];
+        let line = "";
+        for (const word of words) {
+          const candidate = line ? `${line} ${word}` : word;
+          if (line && context.measureText(candidate).width > maxWidth) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = candidate;
+          }
+        }
+        if (line) lines.push(line);
+        const visibleLines = lines.slice(0, maxLines);
+        if (lines.length > maxLines) visibleLines[maxLines - 1] = `${visibleLines[maxLines - 1].replace(/[.,;:!?…]?$/, "…")}`;
+        visibleLines.forEach((item, index) => context.fillText(item, x, y + index * lineHeight));
+      }
+
+      async function drawTicketCanvas() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 1600;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas is unavailable");
+
+        const ticketGroups = orderTypes.length ? orderTypes : [target];
+        const [logo, ...groupDrops] = await Promise.all([
+          loadTicketImage("assets/station-logo.png"),
+          ...ticketGroups.map(group => loadTicketImage(imageFor[group]))
+        ]);
+        const width = canvas.width;
+        const height = canvas.height;
+        context.fillStyle = "#f8eee7";
+        context.fillRect(0, 0, width, height);
+        context.save();
+        context.shadowColor = "#57111d33";
+        context.shadowBlur = 34;
+        context.shadowOffsetY = 12;
+        drawRoundedRect(context, 44, 44, 1112, 1512, 54);
+        context.fillStyle = "#fffdf9";
+        context.fill();
+        context.restore();
+        drawRoundedRect(context, 44, 44, 1112, 1512, 54);
+        context.lineWidth = 5;
+        context.strokeStyle = "#b74d57";
+        context.stroke();
+
+        const header = context.createLinearGradient(70, 70, 1130, 490);
+        header.addColorStop(0, "#7d1627");
+        header.addColorStop(1, "#c7474d");
+        drawRoundedRect(context, 68, 68, 1064, 420, 42);
+        context.fillStyle = header;
+        context.fill();
+        context.globalAlpha = 0.12;
+        context.fillStyle = "#fff";
+        context.beginPath();
+        context.arc(1000, 150, 175, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.arc(170, 440, 120, 0, Math.PI * 2);
+        context.fill();
+        context.globalAlpha = 1;
+        drawContainedImage(context, logo, 430, 88, 340, 150);
+
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillStyle = "#fffaf2";
+        context.font = "900 55px system-ui, Arial, sans-serif";
+        context.fillText("ІГРОВИЙ КВИТОК", 600, 310);
+        context.font = "700 25px system-ui, Arial, sans-serif";
+        context.fillText("КРАПЛИНКИ ДОБРА · ВАШ РЕЗУЛЬТАТ", 600, 382);
+
+        context.fillStyle = "#8c2635";
+        context.textAlign = "left";
+        context.font = "800 25px system-ui, Arial, sans-serif";
+        context.fillText("ГРАВЕЦЬ", 112, 548);
+        context.fillStyle = "#35151c";
+        context.font = "800 48px system-ui, Arial, sans-serif";
+        context.fillText((ticketNameInput.value.trim() || "Гравець").slice(0, 24), 112, 610, 960);
+        context.strokeStyle = "#edd8cf";
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(112, 652);
+        context.lineTo(1088, 652);
+        context.stroke();
+
+        drawRoundedRect(context, 100, 700, 1000, 282, 36);
+        const scorePanel = context.createLinearGradient(100, 700, 1100, 982);
+        scorePanel.addColorStop(0, "#fff0e8");
+        scorePanel.addColorStop(1, "#f9ddd5");
+        context.fillStyle = scorePanel;
+        context.fill();
+        context.textAlign = "center";
+        context.fillStyle = "#8c2635";
+        context.font = "800 27px system-ui, Arial, sans-serif";
+        context.fillText("ВАШ РАХУНОК", 600, 758);
+        context.fillStyle = "#7c1729";
+        context.font = "900 112px system-ui, Arial, sans-serif";
+        context.fillText(score.toLocaleString("uk-UA"), 600, 860, 890);
+        context.fillStyle = "#79565a";
+        context.font = "700 25px system-ui, Arial, sans-serif";
+        context.fillText("Кожен хід — ще одна краплина наполегливості", 600, 934);
+
+        const statY = 1020;
+        const statWidth = 300;
+        const statGap = 38;
+        const statX = [100, 100 + statWidth + statGap, 100 + (statWidth + statGap) * 2];
+        const statLabels = ["РІВЕНЬ", ticketGroups.length > 1 ? "ГРУПИ КРОВІ" : "ГРУПА КРОВІ", "ЗІБРАНО"];
+        const statValues = [String(level), ticketGroups.join(" → "), `${collected} крап.`];
+        for (let index = 0; index < 3; index++) {
+          drawRoundedRect(context, statX[index], statY, statWidth, 190, 28);
+          context.fillStyle = index === 1 ? "#fff0e7" : "#fff8ef";
+          context.fill();
+          context.strokeStyle = "#ecd4cb";
+          context.lineWidth = 2;
+          context.stroke();
+          context.textAlign = "center";
+          context.fillStyle = "#8c2635";
+          context.font = "800 21px system-ui, Arial, sans-serif";
+          context.fillText(statLabels[index], statX[index] + statWidth / 2, statY + 43);
+          context.fillStyle = "#35151c";
+          context.font = index === 1
+            ? (ticketGroups.length > 1 ? "900 34px system-ui, Arial, sans-serif" : "900 55px system-ui, Arial, sans-serif")
+            : "900 42px system-ui, Arial, sans-serif";
+          context.fillText(statValues[index], statX[index] + statWidth / 2, statY + 112, statWidth - 24);
+        }
+        if (ticketGroups.length > 1) {
+          drawContainedImage(context, groupDrops[0], statX[1] + 66, statY + 148, 64, 36);
+          drawContainedImage(context, groupDrops[1], statX[1] + 170, statY + 148, 64, 36);
+        } else {
+          drawContainedImage(context, groupDrops[0], statX[1] + 116, statY + 150, 68, 36);
+        }
+
+        drawRoundedRect(context, 100, 1250, 1000, 190, 30);
+        context.fillStyle = "#fff0e8";
+        context.fill();
+        context.textAlign = "center";
+        context.fillStyle = "#8c2635";
+        context.font = "800 22px system-ui, Arial, sans-serif";
+        context.fillText("ВАШЕ МОТИВАЦІЙНЕ ПОБАЖАННЯ", 600, 1290);
+        context.fillStyle = "#54212b";
+        context.font = "700 27px system-ui, Arial, sans-serif";
+        wrapTicketText(context, donorWishElement.textContent, 600, 1340, 880, 39, level === 10 ? 3 : 2);
+
+        context.fillStyle = "#725459";
+        context.font = "700 21px system-ui, Arial, sans-serif";
+        context.fillText(new Intl.DateTimeFormat("uk-UA", { dateStyle: "long" }).format(new Date()), 600, 1480);
+        context.fillStyle = "#8c2635";
+        context.font = "800 18px system-ui, Arial, sans-serif";
+        context.fillText("ЦЕ ІГРОВЕ ДОСЯГНЕННЯ, А НЕ МЕДИЧНИЙ ДОКУМЕНТ", 600, 1522);
+        return canvas;
+      }
+
+      async function createTicketPdf() {
+        const canvas = await drawTicketCanvas();
+        const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.96));
+        if (!imageBlob) throw new Error("Could not encode ticket image");
+        const imageBytes = new Uint8Array(await imageBlob.arrayBuffer());
+        const encoder = new TextEncoder();
+        const chunks = [];
+        let byteLength = 0;
+        const add = value => {
+          const bytes = typeof value === "string" ? encoder.encode(value) : value;
+          chunks.push(bytes);
+          byteLength += bytes.length;
+        };
+
+        add("%PDF-1.4\n");
+        add(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
+        const offsets = [0];
+        const addObject = (number, content) => {
+          offsets[number] = byteLength;
+          add(`${number} 0 obj\n${content}\nendobj\n`);
+        };
+        addObject(1, "<< /Type /Catalog /Pages 2 0 R >>");
+        addObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        addObject(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 432 576] /Resources << /XObject << /Ticket 4 0 R >> >> /Contents 5 0 R >>");
+        offsets[4] = byteLength;
+        add(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`);
+        add(imageBytes);
+        add("\nendstream\nendobj\n");
+        const pageContent = "q\n432 0 0 576 0 0 cm\n/Ticket Do\nQ\n";
+        const contentBytes = encoder.encode(pageContent);
+        offsets[5] = byteLength;
+        add(`5 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
+        add(contentBytes);
+        add("endstream\nendobj\n");
+        const xrefOffset = byteLength;
+        add("xref\n0 6\n0000000000 65535 f \n");
+        for (let index = 1; index <= 5; index++) add(`${String(offsets[index]).padStart(10, "0")} 00000 n \n`);
+        add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+        return new Blob(chunks, { type: "application/pdf" });
+      }
+
+      async function downloadTicket() {
+        createTicketButton.disabled = true;
+        createTicketButton.textContent = "Готуємо PDF-білет…";
+        ticketStatus.textContent = "";
+        try {
+          const pdf = await createTicketPdf();
+          const url = URL.createObjectURL(pdf);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `kraplynky-level-${level}.pdf`;
+          link.style.display = "none";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          createdTicketFile = null;
+          shareTicketButton.hidden = true;
+          try {
+            if (typeof File !== "undefined" && typeof navigator.canShare === "function" && typeof navigator.share === "function") {
+              const shareableFile = new File([pdf], `kraplynky-level-${level}.pdf`, { type: "application/pdf" });
+              if (navigator.canShare({ files: [shareableFile] })) {
+                createdTicketFile = shareableFile;
+                shareTicketButton.hidden = false;
+              }
+            }
+          } catch { createdTicketFile = null; shareTicketButton.hidden = true; }
+          ticketStatus.textContent = "Білет готовий. PDF збережено як зображення, текст у ньому не виділяється.";
+        } catch {
+          ticketStatus.textContent = "Не вдалося створити PDF. Перезавантажте гру та спробуйте ще раз.";
+        } finally {
+          createTicketButton.disabled = false;
+          createTicketButton.textContent = "Завантажити PDF-білет";
+        }
+      }
+
+      async function shareTicket() {
+        if (!createdTicketFile || !navigator.share) return;
+        try {
+          await navigator.share({
+            files: [createdTicketFile],
+            title: "Мій ігровий квиток «Краплинки добра»",
+            text: `Мій результат: ${score.toLocaleString("uk-UA")} балів на рівні ${level}.`
+          });
+        } catch (error) {
+          if (error.name !== "AbortError") ticketStatus.textContent = "Не вдалося відкрити меню поширення. PDF уже завантажено на пристрій.";
+        }
+      }
+
+      function showWin() {
+        complete = true;
+        clearHint();
+        const finalLevelCompleted = level === 10;
+        winCard.classList.toggle("final-celebration", finalLevelCompleted);
+        finalTrophy.hidden = !finalLevelCompleted;
+        winTitle.textContent = finalLevelCompleted ? "Вітаємо, чемпіоне!" : `Рівень ${level} пройдено!`;
+        const orderSummary = orderTypes.length > 1
+          ? orderTypes.map((group, index) => `${orderGoals[index]} краплинок ${group}`).join(" → ")
+          : `${goal} краплинок групи ${target}`;
+        winMessage.textContent = finalLevelCompleted
+          ? `Ти подолав усі 10 рівнів і набрав ${score.toLocaleString("uk-UA")} балів. Кубок крові — твоя заслужена нагорода!`
+          : `Виконано: ${orderSummary}. Рахунок: ${score.toLocaleString("uk-UA")}.`;
+        donorWishElement.textContent = finalLevelCompleted
+          ? "Здавати кров важливо: донорська кров потрібна щодня. Полтавська обласна станція переливання крові чекає на тебе. Дякуємо, що даруєш надію!"
+          : nextDonorWish();
+        ticketStatus.textContent = "";
+        createdTicketFile = null;
+        shareTicketButton.hidden = true;
+        playAgainButton.textContent = finalLevelCompleted ? "Продовжити гру" : "Наступний рівень";
+        winOverlay.hidden = false;
+        createTicketButton.focus();
+      }
+
+      async function reshuffleBoardWithAnimation() {
+        clearHint();
+        selected = null;
+        const carriedSpecials = specials.filter(special => special?.kind === "wild" || special?.kind === "plasma");
+        showStatus("Ходів не залишилося — перемішуємо краплинки!");
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (!reduceMotion) {
+          boardElement.classList.add("shuffling");
+          boardElement.querySelectorAll(".tile:not(.blocked)").forEach(tile => {
+            const index = Number(tile.dataset.index);
+            tile.style.setProperty("--shuffle-delay", `${Math.floor(index / size) * 18 + index % size * 6}ms`);
+            tile.classList.add("shuffle-out");
+          });
+          await wait(460);
+        }
+
+        makeBoard();
+        carriedSpecials.forEach(special => placeSpecialAtRandomValidCell(special));
+        boardElement.classList.remove("shuffling");
+        if (!reduceMotion) boardElement.classList.add("shuffle-arrival");
+        renderBoard();
+        if (!reduceMotion) {
+          await wait(470);
+          boardElement.classList.remove("shuffle-arrival");
+        }
+      }
+
+      async function detonatePlasma(index) {
+        if (!gameStarted || busy || complete || activePowerup || specials[index]?.kind !== "plasma") return;
+        clearHint();
+        plasmaTap = null;
+        selected = null;
+        const orderIndexAtStart = orderIndex;
+        const [row, col] = coords(index);
+        const clearing = new Set();
+        const bandagesToRemove = new Set();
+        for (let position = 0; position < size; position++) {
+          const rowIndex = row * size + position;
+          const columnIndex = position * size + col;
+          for (const cellIndex of [rowIndex, columnIndex]) {
+            if (bandages[cellIndex]) {
+              clearing.add(cellIndex);
+              bandagesToRemove.add(cellIndex);
+            } else if (cells[cellIndex] !== null) clearing.add(cellIndex);
+          }
+        }
+        const targetDrops = [...clearing].filter(cellIndex => cellIndex !== index
+          && !bandages[cellIndex] && specials[cellIndex] === null && cells[cellIndex] === target).length;
+        const points = (clearing.size - bandagesToRemove.size) * 60 + bandagesToRemove.size * 200;
+        addObjectiveProgress(targetDrops);
+        score += points;
+        moves++;
+        busy = true;
+        renderBoard(clearing);
+        updateHud();
+        showCombo(1, points);
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
+        for (const cellIndex of clearing) {
+          if (bandagesToRemove.has(cellIndex)) bandages[cellIndex] = false;
+          else {
+            cells[cellIndex] = null;
+            specials[cellIndex] = null;
+          }
+        }
+        const refillCells = refillBoardColumns();
+        const clearedTopRow = [...clearing].some(cellIndex => cellIndex < size);
+        if (!clearedTopRow) seedRefillMatch(refillCells);
+        renderBoard(new Set(), new Set(refillCells));
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
+        await resolveBoard();
+        if (!complete) showStatus(orderIndex !== orderIndexAtStart
+          ? `Плазмова крапля очистила хрест! Перше замовлення виконано — тепер збирай ${orderGoal} краплинок ${target}.`
+          : "Плазмова крапля підірвалася й очистила рядок та стовпець у чотирьох напрямках!");
+      }
+
+      async function resolveBoard(resolution = null) {
+        const isRootResolution = resolution === null;
+        if (!resolution) resolution = { cascadeWaves: 0, urgentCascadeCounted: false };
+        let cascade = 0;
+        let wildCreatedThisTurn = false;
+        let plasmaCreatedThisTurn = false;
+        let bandagesRemovedThisTurn = 0;
+        while (cascade < 30) {
+          const runs = findMatchRuns();
+          if (!runs.length) break;
+          cascade++;
+          resolution.cascadeWaves++;
+          if (resolution.cascadeWaves > 1 && !resolution.urgentCascadeCounted) {
+            resolution.urgentCascadeCounted = true;
+            recordUrgentCallCascade();
+          }
+          const matches = new Set(runs.flatMap(run => run.indices));
+          const targetCells = new Set(runs.filter(run => run.type === target).flatMap(run => run.indices));
+          const creationRun = level >= 2 ? runs
+            .filter(run => run.indices.length >= 5 && run.indices.every(index => !specials[index]))
+            .sort((first, second) => second.indices.length - first.indices.length)[0] : null;
+          const plasmaRun = level >= 4 && !creationRun ? runs
+            .filter(run => run.indices.length === 4 && run.indices.every(index => !specials[index]))
+            .sort((first, second) => second.indices.length - first.indices.length)[0] : null;
+          let createdIndex = null;
+          const matchedCells = new Set(matches);
+          if (creationRun) {
+            createdIndex = creationRun.indices[Math.floor(creationRun.indices.length / 2)];
+            specials[createdIndex] = { kind: "wild" };
+            matches.delete(createdIndex);
+            wildCreatedThisTurn = true;
+          } else if (plasmaRun) {
+            createdIndex = plasmaRun.indices[Math.floor(plasmaRun.indices.length / 2)];
+            specials[createdIndex] = { kind: "plasma" };
+            matches.delete(createdIndex);
+            plasmaCreatedThisTurn = true;
+          }
+          const cleared = matches;
+          const bandagesToRemove = bandagesAdjacentTo(matchedCells);
+          const visualCleared = new Set([...cleared, ...bandagesToRemove]);
+          const clearedTopRow = [...visualCleared].some(index => index < size);
+          const targetMatches = [...cleared].filter(index => matchedCells.has(index)
+            ? targetCells.has(index)
+            : cells[index] === target).length;
+          addObjectiveProgress(targetMatches);
+          const matchPoints = (cleared.size + (createdIndex === null ? 0 : 1)) * 60 * cascade + bandagesToRemove.size * 200;
+          score += matchPoints;
+          bandagesRemovedThisTurn += bandagesToRemove.size;
+          showCombo(cascade, matchPoints);
+          updateHud();
+          renderBoard(visualCleared);
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300);
+          for (const index of cleared) {
+            cells[index] = null;
+            specials[index] = null;
+          }
+          for (const index of bandagesToRemove) bandages[index] = false;
+          const refillCells = refillBoardColumns();
+          if (!clearedTopRow) seedRefillMatch(refillCells);
+          selected = null;
+          renderBoard(new Set(), new Set(refillCells));
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
+        }
+        if (cascade >= 30) makeBoard();
+        const readyHemocon = hemocons.find(item => item.ready && !item.complete);
+        if (readyHemocon) {
+          await activateReadyHemocon(readyHemocon);
+          await resolveBoard(resolution);
+          if (isRootResolution) settleUrgentCallMove();
+          return;
+        }
+        if (orderTransitionPending) {
+          orderTransitionPending = false;
+          showStatus(`Перше замовлення виконано! Тепер збери ${orderGoal} краплинок групи ${target}.`);
+        } else if (bandagesRemovedThisTurn) showStatus(`${bandagesRemovedThisTurn === 1 ? "Медичну пов’язку знято" : `Медичних пов’язок знято: ${bandagesRemovedThisTurn}`}! +${(bandagesRemovedThisTurn * 200).toLocaleString("uk-UA")} бонусних балів.`);
+        else if (wildCreatedThisTurn) showStatus("Лінія з 5 краплин створила універсальну!");
+        else if (plasmaCreatedThisTurn) showStatus("Лінія з 4 краплин створила плазмову краплю!");
+        settleUrgentCallMove();
         if (collected >= goal) {
+          busy = false;
+          renderBoard();
+          updateHud();
           showWin();
           return;
         }
-        if (!hasPossibleMove()) {
-          makeBoard();
-          renderBoard();
-          showStatus("Ходів не залишилося — поле перемішано.");
-        }
+        if (!hasPossibleMove()) await reshuffleBoardWithAnimation();
+        busy = false;
+        renderBoard();
+        updateHud();
+        resetHintTimer();
       }
 
       async function swap(first, second) {
-        if (busy || complete || !isAdjacent(first, second)) return false;
+        if (busy || complete || cells[first] === null || cells[second] === null || !isAdjacent(first, second)) return false;
+        clearHint();
         selected = null;
         [cells[first], cells[second]] = [cells[second], cells[first]];
+        [specials[first], specials[second]] = [specials[second], specials[first]];
         if (!findMatches().size) {
           [cells[first], cells[second]] = [cells[second], cells[first]];
+          [specials[first], specials[second]] = [specials[second], specials[first]];
           renderBoard();
           showStatus("Обміняй краплинки так, щоб утворити лінію з трьох.");
+          resetHintTimer();
           return false;
         }
         busy = true;
@@ -581,7 +2440,23 @@
       }
 
       function selectTile(index) {
-        if (busy || complete) return;
+        if (!gameStarted || busy || complete || cells[index] === null) return;
+        resetHintTimer();
+        if (activePowerup === "syringe") {
+          if (syringeFirst === null) {
+            syringeFirst = index;
+            renderBoard();
+            showStatus("Тепер обери другу, будь-яку іншу краплинку.");
+            return;
+          }
+          if (syringeFirst === index) {
+            showStatus("Потрібно вибрати дві різні краплинки.");
+            return;
+          }
+          useSyringeSwap(syringeFirst, index);
+          return;
+        }
+        if (activePowerup) return;
         if (selected === null || selected === index) {
           selected = selected === index ? null : index;
           renderBoard();
@@ -596,13 +2471,41 @@
       }
 
       boardElement.addEventListener("click", event => {
-        if (suppressClick) { suppressClick = false; return; }
+        if (suppressClick) { suppressClick = false; plasmaTap = null; return; }
+        const hemocon = event.target.closest(".hemocon");
+        if (hemocon) {
+          plasmaTap = null;
+          const hemoconIndex = Number(hemocon.dataset.hemoconIndex);
+          if (selected === null) {
+            showStatus("Спочатку вибери краплинку групи гемокона, потім торкнися його.");
+          } else {
+            transferDropToHemocon(selected, hemoconIndex);
+          }
+          return;
+        }
         const tile = event.target.closest(".tile");
-        if (tile) selectTile(Number(tile.dataset.index));
+        if (!tile) { plasmaTap = null; return; }
+        const index = Number(tile.dataset.index);
+        if (specials[index]?.kind === "plasma" && !activePowerup) {
+          if (!gameStarted || busy || complete) return;
+          const now = performance.now();
+          if (plasmaTap?.index === index && now - plasmaTap.time <= 650) {
+            detonatePlasma(index);
+            return;
+          }
+          plasmaTap = { index, time: now };
+          selected = null;
+          renderBoard();
+          showStatus("Двічі натисни або торкнися плазмової краплі, щоб підірвати її.");
+          return;
+        }
+        plasmaTap = null;
+        selectTile(index);
       });
       boardElement.addEventListener("pointerdown", event => {
         const tile = event.target.closest(".tile");
-        if (!tile || event.button !== 0 || busy || complete) return;
+        if (!tile || event.button !== 0 || !gameStarted || busy || complete || activePowerup || cells[Number(tile.dataset.index)] === null) return;
+        resetHintTimer();
         dragStart = { index: Number(tile.dataset.index), x: event.clientX, y: event.clientY, pointerId: event.pointerId };
       });
       boardElement.addEventListener("pointerup", event => {
@@ -611,7 +2514,15 @@
         dragStart = null;
         const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
         if (moved < 14) return;
-        const endTile = document.elementFromPoint(event.clientX, event.clientY)?.closest(".tile");
+        const endElement = document.elementFromPoint(event.clientX, event.clientY);
+        const endHemocon = endElement?.closest(".hemocon");
+        if (endHemocon) {
+          suppressClick = true;
+          transferDropToHemocon(start.index, Number(endHemocon.dataset.hemoconIndex));
+          setTimeout(() => { suppressClick = false; }, 450);
+          return;
+        }
+        const endTile = endElement?.closest(".tile");
         if (!endTile) return;
         const end = Number(endTile.dataset.index);
         if (isAdjacent(start.index, end)) {
@@ -622,7 +2533,14 @@
       });
       boardElement.addEventListener("pointercancel", () => { dragStart = null; });
       boardElement.addEventListener("keydown", event => {
-        if (selected === null || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        const hemocon = event.target.closest(".hemocon");
+        if (hemocon && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          if (selected === null) showStatus("Спочатку вибери краплинку групи гемокона, потім активуй його.");
+          else transferDropToHemocon(selected, Number(hemocon.dataset.hemoconIndex));
+          return;
+        }
+        if (!gameStarted || activePowerup || selected === null || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
         event.preventDefault();
         const [row, col] = coords(selected);
         const next = {
@@ -635,16 +2553,136 @@
       });
 
       function startLevel() {
-        target = randomTarget();
-        goal = levelGoals[level - 1];
+        currentDifficulty = randomDifficulty();
+        goal = level * 5;
+        prepareLevelOrders();
+        const showWildTutorial = level === 2 && gameStarted && !tutorialSeen.wild;
+        const showHemoconTutorial = level === 3 && gameStarted && !tutorialSeen.hemocon;
+        const showUrgentCallTutorial = level === 3 && gameStarted && !tutorialSeen.urgentCall;
+        const showPlasmaTutorial = level === 4 && gameStarted && !tutorialSeen.plasma;
+        const showBandageTutorial = level === 5 && gameStarted && !tutorialSeen.bandage;
+        wildTutorialOverlay.hidden = true;
+        hemoconTutorialOverlay.hidden = true;
+        urgentCallTutorialOverlay.hidden = true;
+        plasmaTutorialOverlay.hidden = true;
+        bandageTutorialOverlay.hidden = true;
+        urgentCall = {
+          active: level >= 3,
+          cascades: 0,
+          startMove: moves,
+          lastCascadeMove: -1,
+          lastSettledMove: moves,
+          state: level >= 3 ? "active" : "inactive",
+          notice: ""
+        };
+        bandages.fill(false);
+        if (showHemoconTutorial) hemocons = [];
+        else spawnHemocons();
         collected = 0;
         selected = null;
-        busy = false;
+        activePowerup = null;
+        syringeFirst = null;
+        plasmaTap = null;
+        busy = showWildTutorial || showHemoconTutorial || showUrgentCallTutorial || showPlasmaTutorial || showBandageTutorial;
         complete = false;
         winOverlay.hidden = true;
         makeBoard();
+        placeLevelFiveBandages();
+        placeLevelTwoWild();
+        placeLevelFourPlasma();
         renderBoard();
         updateHud();
+        if (showWildTutorial) {
+          wildOrderRules.textContent = `Спочатку збери ${orderGoals[0]} краплинок групи ${orderTypes[0]}, потім — ${orderGoals[1]} краплинок групи ${orderTypes[1]}. Загалом потрібно ${goal}.`;
+          wildOrderFirstDrop.src = imageFor[orderTypes[0]];
+          wildOrderFirstDrop.alt = `Перша група замовлення: ${orderTypes[0]}`;
+          wildOrderSecondDrop.src = imageFor[orderTypes[1]];
+          wildOrderSecondDrop.alt = `Друга група замовлення: ${orderTypes[1]}`;
+          wildOrderDemo.setAttribute("aria-label", `Спочатку збери ${orderGoals[0]} краплинок групи ${orderTypes[0]}, потім ${orderGoals[1]} краплинок групи ${orderTypes[1]}`);
+          wildTutorialOverlay.hidden = false;
+          wildTutorialStartButton.focus();
+        } else if (showHemoconTutorial) {
+          renderHemoconTutorialIllustration();
+          hemoconTutorialOverlay.hidden = false;
+          hemoconTutorialStartButton.focus();
+        } else if (showUrgentCallTutorial) {
+          urgentCallTutorialOverlay.hidden = false;
+          urgentCallTutorialStartButton.focus();
+        } else if (showPlasmaTutorial) {
+          plasmaTutorialOverlay.hidden = false;
+          plasmaTutorialStartButton.focus();
+        } else if (showBandageTutorial) {
+          bandageTutorialOverlay.hidden = false;
+          bandageTutorialStartButton.focus();
+        } else if (gameStarted && hemocons.length) {
+          showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
+        }
+        resetHintTimer();
+      }
+
+      function finishWildTutorial() {
+        if (wildTutorialOverlay.hidden) return;
+        rememberTutorialSeen("wild");
+        wildTutorialOverlay.hidden = true;
+        busy = false;
+        renderBoard();
+        updateHud();
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
+      }
+
+      function finishPlasmaTutorial() {
+        if (plasmaTutorialOverlay.hidden) return;
+        rememberTutorialSeen("plasma");
+        plasmaTutorialOverlay.hidden = true;
+        busy = false;
+        renderBoard();
+        updateHud();
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
+      }
+
+      function finishBandageTutorial() {
+        if (bandageTutorialOverlay.hidden) return;
+        rememberTutorialSeen("bandage");
+        bandageTutorialOverlay.hidden = true;
+        busy = false;
+        renderBoard();
+        updateHud();
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked):not(:disabled)")?.focus();
+      }
+
+      function finishHemoconTutorial() {
+        if (hemoconTutorialOverlay.hidden) return;
+        rememberTutorialSeen("hemocon");
+        hemoconTutorialOverlay.hidden = true;
+        spawnHemocons();
+        makeBoard();
+        renderBoard();
+        updateHud();
+        if (level === 3 && !tutorialSeen.urgentCall) {
+          busy = true;
+          urgentCallTutorialOverlay.hidden = false;
+          urgentCallTutorialStartButton.focus();
+          return;
+        }
+        busy = false;
+        showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
+      }
+
+      function finishUrgentCallTutorial() {
+        if (urgentCallTutorialOverlay.hidden) return;
+        rememberTutorialSeen("urgentCall");
+        urgentCallTutorialOverlay.hidden = true;
+        busy = false;
+        renderBoard();
+        updateHud();
+        showStatus(`Зроби два каскадні ходи за ${urgentCallMoveLimit} ходів — бонус ${urgentCallReward} балів!`);
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
       }
 
       function startNewGame() {
@@ -655,17 +2693,31 @@
       }
 
       function advanceLevel() {
-        if (level < levelGoals.length) {
-          level++;
-          startLevel();
-          return;
-        }
-        startNewGame();
+        level++;
+        startLevel();
       }
 
       newGameButton.addEventListener("click", startNewGame);
       playAgainButton.addEventListener("click", advanceLevel);
+      createTicketButton.addEventListener("click", downloadTicket);
+      shareTicketButton.addEventListener("click", shareTicket);
+      needleHelpButton.addEventListener("click", useNeedle);
+      syringeHelpButton.addEventListener("click", toggleSyringe);
+      centrifugeHelpButton.addEventListener("click", useCentrifuge);
+      startGameButton.addEventListener("click", () => {
+        gameStarted = true;
+        introOverlay.hidden = true;
+        updateHud();
+        resetHintTimer();
+        boardElement.querySelector(".tile:not(.blocked)")?.focus();
+      });
+      hemoconTutorialStartButton.addEventListener("click", finishHemoconTutorial);
+      wildTutorialStartButton.addEventListener("click", finishWildTutorial);
+      plasmaTutorialStartButton.addEventListener("click", finishPlasmaTutorial);
+      bandageTutorialStartButton.addEventListener("click", finishBandageTutorial);
+      urgentCallTutorialStartButton.addEventListener("click", finishUrgentCallTutorial);
       startNewGame();
+      startGameButton.focus();
     })();
   </script>
 </body>
