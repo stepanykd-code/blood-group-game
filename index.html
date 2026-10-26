@@ -142,6 +142,9 @@
     }
     .tile.falling { animation: drop-in .24s cubic-bezier(.2, .8, .25, 1) var(--fall-delay, 0ms) both; }
     .tile.blocked { border: 0; background: transparent; box-shadow: none; cursor: default; opacity: 0; pointer-events: none; }
+    .tile.transferring { position: relative; z-index: 10; pointer-events: none; animation: drop-transfer .38s cubic-bezier(.2, .8, .25, 1) both; }
+    .tile.shuffle-out { animation: shuffle-out .32s cubic-bezier(.5, 0, .7, .2) var(--shuffle-delay, 0ms) both; pointer-events: none; }
+    .tile.shuffle-in { animation: shuffle-in .34s cubic-bezier(.2, .8, .25, 1) var(--shuffle-delay, 0ms) both; }
     .hemocon {
       position: absolute;
       z-index: 5;
@@ -150,9 +153,18 @@
       min-width: 0;
       min-height: 0;
       overflow: visible;
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: pointer;
+      touch-action: manipulation;
       isolation: isolate;
+      border: 4px solid var(--hemocon-color, #e1748e);
+      border-radius: clamp(8px, 1vw, 15px);
+      background: color-mix(in srgb, var(--hemocon-color, #e1748e) 34%, white);
+      box-shadow: inset 0 0 0 2px #fff8, 0 4px 12px #31101b55, 0 0 12px color-mix(in srgb, var(--hemocon-color, #e1748e) 60%, transparent);
+      transition: filter .18s ease, transform .18s ease;
     }
+    .hemocon.accepting { filter: drop-shadow(0 0 11px #ffd66a); transform: scale(1.035); }
+    .hemocon.absorbing { animation: hemocon-absorb .32s ease-in-out; }
     .hemocon-fluid {
       position: absolute;
       z-index: 1;
@@ -207,10 +219,31 @@
     .hemocon-label strong { font-size: clamp(12px, 1.2vw, 19px); line-height: 1; font-weight: 1000; }
     .hemocon-label span { font-size: clamp(9px, .82vw, 12px); line-height: 1; font-weight: 900; }
     .hemocon.complete { animation: hemocon-pop .32s cubic-bezier(.2, .8, .25, 1) both; }
+    .board.shuffling { filter: brightness(1.18) saturate(1.16); }
+    .board.shuffle-arrival { animation: shuffle-board-in .34s ease-out both; }
     @keyframes hemocon-pop {
       0% { transform: scale(1); filter: brightness(1); }
       45% { transform: scale(1.16); filter: brightness(1.8); }
       100% { transform: scale(.2); opacity: 0; filter: brightness(2.2); }
+    }
+    @keyframes drop-transfer {
+      to { transform: translate(var(--fly-x), var(--fly-y)) scale(.22); opacity: 0; filter: brightness(1.8); }
+    }
+    @keyframes hemocon-absorb {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.65) drop-shadow(0 0 12px #ffd66a); transform: scale(1.06); }
+    }
+    @keyframes shuffle-out {
+      to { transform: scale(.18) rotate(115deg); opacity: 0; filter: blur(3px); }
+    }
+    @keyframes shuffle-in {
+      0% { transform: scale(.2) rotate(-95deg); opacity: 0; filter: blur(3px) brightness(1.8); }
+      75% { transform: scale(1.08) rotate(4deg); opacity: 1; filter: blur(0) brightness(1.25); }
+      100% { transform: scale(1) rotate(0); opacity: 1; filter: none; }
+    }
+    @keyframes shuffle-board-in {
+      0% { filter: brightness(1.4) saturate(1.3); }
+      100% { filter: brightness(1) saturate(1); }
     }
     .tile.hint {
       position: relative;
@@ -670,7 +703,7 @@
             <li>Обмінюй сусідні краплинки, щоб скласти лінію з 3 або більше однакових.</li>
             <li>Збирай краплинки потрібної групи крові. З кожним рівнем ціль зростає на 10.</li>
             <li>Нові краплі можуть утворити лінію під час падіння — лови каскади й множник комбо!</li>
-            <li>З рівня 3 гемокони займають 2×2 клітинки. Лінії з крапель їхньої групи поруч наповнюють їх; 10 крапель дають 1 000 балів, а цільовий гемокон додає 10 до прогресу.</li>
+            <li>З рівня 3 на полі з’являється один гемокон розміром 2×2. Вибери краплю його групи й торкнися гемокона або перетягни краплю на нього. 10 крапель дають 1 000 балів, а цільовий гемокон додає 10 до прогресу.</li>
           </ol>
           <h2>Чарівні допомоги</h2>
           <div class="intro-power-list">
@@ -702,7 +735,7 @@
     (() => {
       const size = 6;
       const targetDropChance = 0.30;
-      const refillAssistChances = { relaxed: 0.15, standard: 0.10, challenging: 0.05 };
+      const refillAssistChances = { relaxed: 0.72, standard: 0.58, challenging: 0.44 };
       const difficultyModes = Object.keys(refillAssistChances);
       const donorWishes = [
         "Дякуємо, що даруєте надію — ваша доброта має велику силу.",
@@ -844,50 +877,13 @@
       function spawnHemocons() {
         hemocons = [];
         if (level < 3) return;
-        const count = 1 + Math.floor(Math.random() * 3);
-        let attempts = 0;
-        while (hemocons.length < count && attempts < 600) {
-          attempts++;
-          const candidate = {
-            row: Math.floor(Math.random() * (size - 1)),
-            col: Math.floor(Math.random() * (size - 1)),
-            type: randomTarget(),
-            fill: 0,
-            complete: false
-          };
-          const overlaps = hemocons.some(item => candidate.row < item.row + 2 && candidate.row + 2 > item.row && candidate.col < item.col + 2 && candidate.col + 2 > item.col);
-          if (!overlaps) hemocons.push(candidate);
-        }
-        for (let row = 0; row < size - 1 && hemocons.length < count; row++) {
-          for (let col = 0; col < size - 1 && hemocons.length < count; col++) {
-            const overlaps = hemocons.some(item => row < item.row + 2 && row + 2 > item.row && col < item.col + 2 && col + 2 > item.col);
-            if (!overlaps) hemocons.push({ row, col, type: randomTarget(), fill: 0, complete: false });
-          }
-        }
-      }
-
-      function isNextToHemocon(index, hemocon) {
-        const [row, col] = coords(index);
-        return ((row === hemocon.row - 1 || row === hemocon.row + 2) && col >= hemocon.col && col < hemocon.col + 2)
-          || ((col === hemocon.col - 1 || col === hemocon.col + 2) && row >= hemocon.row && row < hemocon.row + 2);
-      }
-
-      function absorbMatchedDrops(matches) {
-        const completed = [];
-        for (const index of matches) {
-          const type = cells[index];
-          if (!type) continue;
-          const hemocon = hemocons.find(item => !item.complete && item.type === type && isNextToHemocon(index, item));
-          if (!hemocon) continue;
-          hemocon.fill++;
-          if (hemocon.fill === 10) {
-            hemocon.complete = true;
-            score += 1000;
-            if (hemocon.type === target) collected += 10;
-            completed.push(hemocon);
-          }
-        }
-        return completed;
+        hemocons.push({
+          row: Math.floor(Math.random() * (size - 1)),
+          col: Math.floor(Math.random() * (size - 1)),
+          type: randomTarget(),
+          fill: 0,
+          complete: false
+        });
       }
 
       function findMatches() {
@@ -971,6 +967,40 @@
         return true;
       }
 
+      function refillBoardColumns() {
+        const refillCells = [];
+        for (let col = 0; col < size; col++) {
+          let segmentStart = 0;
+          while (segmentStart < size) {
+            if (isHemoconCell(segmentStart * size + col)) {
+              segmentStart++;
+              continue;
+            }
+            let segmentEnd = segmentStart;
+            while (segmentEnd < size && !isHemoconCell(segmentEnd * size + col)) segmentEnd++;
+            let destination = segmentEnd - 1;
+            for (let row = segmentEnd - 1; row >= segmentStart; row--) {
+              const index = row * size + col;
+              if (cells[index] !== null) {
+                const destinationIndex = destination * size + col;
+                if (destinationIndex !== index) {
+                  cells[destinationIndex] = cells[index];
+                  cells[index] = null;
+                }
+                destination--;
+              }
+            }
+            for (let row = destination; row >= segmentStart; row--) {
+              const index = row * size + col;
+              cells[index] = randomType();
+              refillCells.push(index);
+            }
+            segmentStart = segmentEnd;
+          }
+        }
+        return refillCells;
+      }
+
       function makeBoard() {
         for (let attempt = 0; attempt < 500; attempt++) {
           const next = [];
@@ -1023,6 +1053,10 @@
             tile.classList.add("falling");
             tile.style.setProperty("--fall-delay", `${Math.floor(index / size) * 18}ms`);
           }
+          if (boardElement.classList.contains("shuffle-arrival") && type !== null) {
+            tile.classList.add("shuffle-in");
+            tile.style.setProperty("--shuffle-delay", `${Math.floor(index / size) * 18 + index % size * 6}ms`);
+          }
           tile.dataset.index = String(index);
           tile.setAttribute("role", "gridcell");
           tile.setAttribute("aria-selected", String(selected === index));
@@ -1031,10 +1065,14 @@
         for (const hemocon of hemocons) {
           const visual = document.createElement("div");
           visual.className = `hemocon${hemocon.complete ? " complete" : ""}`;
+          if (!busy && selected !== null && cells[selected] === hemocon.type) visual.classList.add("accepting");
           visual.style.gridColumn = `${hemocon.col + 1} / span 2`;
           visual.style.gridRow = `${hemocon.row + 1} / span 2`;
+          visual.style.setProperty("--hemocon-color", types.find(item => item.id === hemocon.type).color);
           visual.style.setProperty("--fill-height", `${hemocon.fill * 5.8}%`);
-          visual.setAttribute("role", "img");
+          visual.dataset.hemoconIndex = String(hemocons.indexOf(hemocon));
+          visual.setAttribute("role", "button");
+          visual.tabIndex = busy || complete || activePowerup ? -1 : 0;
           visual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10`);
 
           const backing = document.createElement("div");
@@ -1056,6 +1094,64 @@
           fragment.append(visual);
         }
         boardElement.replaceChildren(fragment);
+      }
+
+      async function transferDropToHemocon(dropIndex, hemoconIndex) {
+        const hemocon = hemocons[hemoconIndex];
+        if (!gameStarted || busy || complete || activePowerup || !hemocon || cells[dropIndex] === null) return;
+        if (cells[dropIndex] !== hemocon.type) {
+          showStatus(`Гемокон приймає лише групу ${hemocon.type}.`);
+          return;
+        }
+
+        clearHint();
+        busy = true;
+        selected = null;
+        moves++;
+        const source = boardElement.querySelector(`.tile[data-index="${dropIndex}"]`);
+        const visual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
+        if (source && visual && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          const sourceRect = source.getBoundingClientRect();
+          const targetRect = visual.getBoundingClientRect();
+          source.style.setProperty("--fly-x", `${targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2)}px`);
+          source.style.setProperty("--fly-y", `${targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2)}px`);
+          source.classList.add("transferring");
+          visual.classList.add("absorbing");
+        }
+        updateHud();
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
+
+        cells[dropIndex] = null;
+        hemocon.fill++;
+        const liveVisual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
+        if (liveVisual) {
+          liveVisual.style.setProperty("--fill-height", `${hemocon.fill * 5.8}%`);
+          liveVisual.setAttribute("aria-label", `Гемокон групи ${hemocon.type}, заповнений на ${hemocon.fill} з 10`);
+          const count = liveVisual.querySelector(".hemocon-label span");
+          if (count) count.textContent = `${hemocon.fill} / 10`;
+        }
+
+        const completed = hemocon.fill >= 10;
+        if (completed) {
+          hemocon.complete = true;
+          score += 1000;
+          if (hemocon.type === target) collected += 10;
+          liveVisual?.classList.add("complete");
+          showStatus(`Гемокон наповнено! +1 000 балів${hemocon.type === target ? " і +10 до цілі" : ""}.`);
+          updateHud();
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 340);
+          hemocons = hemocons.filter(item => item !== hemocon);
+        } else {
+          showStatus(`Гемокон ${hemocon.type}: ${hemocon.fill} з 10 крапель.`);
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
+        }
+
+        const refillCells = refillBoardColumns();
+        selected = null;
+        renderBoard(new Set(), new Set(refillCells));
+        updateHud();
+        await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240);
+        await resolveBoard();
       }
 
       function clearHint() {
@@ -1114,9 +1210,8 @@
         statusTimer = setTimeout(() => statusElement.classList.remove("visible"), 1700);
       }
 
-      function showCombo(cascade, points, hemoconCount = 0) {
-        const hemoconBonus = hemoconCount ? ` · гемокон +${(hemoconCount * 1000).toLocaleString("uk-UA")}` : "";
-        statusElement.textContent = `${cascade > 1 ? `КОМБО ×${cascade}!` : "Є ЛІНІЯ!"} +${points.toLocaleString("uk-UA")} балів${hemoconBonus}`;
+      function showCombo(cascade, points) {
+        statusElement.textContent = `${cascade > 1 ? `КОМБО ×${cascade}!` : "Є ЛІНІЯ!"} +${points.toLocaleString("uk-UA")} балів`;
         statusElement.classList.add("visible", "combo");
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => statusElement.classList.remove("visible", "combo"), 1300);
@@ -1485,6 +1580,31 @@
         createTicketButton.focus();
       }
 
+      async function reshuffleBoardWithAnimation() {
+        clearHint();
+        selected = null;
+        showStatus("Ходів не залишилося — перемішуємо краплинки!");
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (!reduceMotion) {
+          boardElement.classList.add("shuffling");
+          boardElement.querySelectorAll(".tile:not(.blocked)").forEach(tile => {
+            const index = Number(tile.dataset.index);
+            tile.style.setProperty("--shuffle-delay", `${Math.floor(index / size) * 18 + index % size * 6}ms`);
+            tile.classList.add("shuffle-out");
+          });
+          await wait(460);
+        }
+
+        makeBoard();
+        boardElement.classList.remove("shuffling");
+        if (!reduceMotion) boardElement.classList.add("shuffle-arrival");
+        renderBoard();
+        if (!reduceMotion) {
+          await wait(470);
+          boardElement.classList.remove("shuffle-arrival");
+        }
+      }
+
       async function resolveBoard() {
         let cascade = 0;
         while (cascade < 30) {
@@ -1492,65 +1612,33 @@
           if (!matches.size) break;
           cascade++;
           const clearedTopRow = [...matches].some(index => index < size);
-          const completedHemocons = absorbMatchedDrops(matches);
           const targetMatches = [...matches].filter(index => cells[index] === target).length;
           collected += targetMatches;
           const matchPoints = matches.size * 60 * cascade;
           score += matchPoints;
-          showCombo(cascade, matchPoints, completedHemocons.length);
+          showCombo(cascade, matchPoints);
           updateHud();
           renderBoard(matches);
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300);
           for (const index of matches) cells[index] = null;
-          if (completedHemocons.length) hemocons = hemocons.filter(item => !item.complete);
-          const refillCells = [];
-          for (let col = 0; col < size; col++) {
-            let segmentStart = 0;
-            while (segmentStart < size) {
-              if (isHemoconCell(segmentStart * size + col)) {
-                segmentStart++;
-                continue;
-              }
-              let segmentEnd = segmentStart;
-              while (segmentEnd < size && !isHemoconCell(segmentEnd * size + col)) segmentEnd++;
-              let destination = segmentEnd - 1;
-              for (let row = segmentEnd - 1; row >= segmentStart; row--) {
-                const index = row * size + col;
-                if (cells[index] !== null) {
-                  const destinationIndex = destination * size + col;
-                  if (destinationIndex !== index) {
-                    cells[destinationIndex] = cells[index];
-                    cells[index] = null;
-                  }
-                  destination--;
-                }
-              }
-              for (let row = destination; row >= segmentStart; row--) {
-                const index = row * size + col;
-                cells[index] = randomType();
-                refillCells.push(index);
-              }
-              segmentStart = segmentEnd;
-            }
-          }
+          const refillCells = refillBoardColumns();
           if (!clearedTopRow) seedRefillMatch(refillCells);
           selected = null;
           renderBoard(new Set(), new Set(refillCells));
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240);
         }
         if (cascade >= 30) makeBoard();
-        busy = false;
-        renderBoard();
-        updateHud();
         if (collected >= goal) {
+          busy = false;
+          renderBoard();
+          updateHud();
           showWin();
           return;
         }
-        if (!hasPossibleMove()) {
-          makeBoard();
-          renderBoard();
-          showStatus("Ходів не залишилося — поле перемішано.");
-        }
+        if (!hasPossibleMove()) await reshuffleBoardWithAnimation();
+        busy = false;
+        renderBoard();
+        updateHud();
         resetHintTimer();
       }
 
@@ -1608,6 +1696,16 @@
 
       boardElement.addEventListener("click", event => {
         if (suppressClick) { suppressClick = false; return; }
+        const hemocon = event.target.closest(".hemocon");
+        if (hemocon) {
+          const hemoconIndex = Number(hemocon.dataset.hemoconIndex);
+          if (selected === null) {
+            showStatus("Спочатку вибери краплинку групи гемокона, потім торкнися його.");
+          } else {
+            transferDropToHemocon(selected, hemoconIndex);
+          }
+          return;
+        }
         const tile = event.target.closest(".tile");
         if (tile) selectTile(Number(tile.dataset.index));
       });
@@ -1623,7 +1721,15 @@
         dragStart = null;
         const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
         if (moved < 14) return;
-        const endTile = document.elementFromPoint(event.clientX, event.clientY)?.closest(".tile");
+        const endElement = document.elementFromPoint(event.clientX, event.clientY);
+        const endHemocon = endElement?.closest(".hemocon");
+        if (endHemocon) {
+          suppressClick = true;
+          transferDropToHemocon(start.index, Number(endHemocon.dataset.hemoconIndex));
+          setTimeout(() => { suppressClick = false; }, 450);
+          return;
+        }
+        const endTile = endElement?.closest(".tile");
         if (!endTile) return;
         const end = Number(endTile.dataset.index);
         if (isAdjacent(start.index, end)) {
@@ -1634,6 +1740,13 @@
       });
       boardElement.addEventListener("pointercancel", () => { dragStart = null; });
       boardElement.addEventListener("keydown", event => {
+        const hemocon = event.target.closest(".hemocon");
+        if (hemocon && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          if (selected === null) showStatus("Спочатку вибери краплинку групи гемокона, потім активуй його.");
+          else transferDropToHemocon(selected, Number(hemocon.dataset.hemoconIndex));
+          return;
+        }
         if (!gameStarted || activePowerup || selected === null || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
         event.preventDefault();
         const [row, col] = coords(selected);
@@ -1661,7 +1774,7 @@
         makeBoard();
         renderBoard();
         updateHud();
-        if (gameStarted && hemocons.length) showStatus(`Гемокони на полі: ${hemocons.length}. Шукай поруч лінії їхньої групи.`);
+        if (gameStarted && hemocons.length) showStatus(`Гемокон ${hemocons[0].type}: перенеси в нього 10 крапель цієї групи.`);
         resetHintTimer();
       }
 
