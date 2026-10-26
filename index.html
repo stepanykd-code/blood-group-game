@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#6b1421">
-  <title>Краплинки</title>
+  <meta name="description" content="Краплинки добра — драйвова гра від Полтавської станції переливання крові.">
+  <title>Краплинки добра — гра про групи крові</title>
   <style>
     :root {
       color-scheme: light;
@@ -139,6 +140,7 @@
       pointer-events: none;
       animation: drop-ripple .28s ease-out both;
     }
+    .tile.falling { animation: drop-in .24s cubic-bezier(.2, .8, .25, 1) var(--fall-delay, 0ms) both; }
     .tile.hint {
       position: relative;
       z-index: 2;
@@ -163,6 +165,11 @@
       0% { transform: scale(1); opacity: 1; filter: brightness(1); }
       18% { transform: scale(1.1); opacity: 1; filter: brightness(1.5); }
       100% { transform: scale(.32) rotate(-9deg); opacity: 0; filter: brightness(2); }
+    }
+    @keyframes drop-in {
+      0% { transform: translateY(-70%) scale(.72); opacity: .2; filter: brightness(1.6); }
+      68% { transform: translateY(4%) scale(1.05); opacity: 1; filter: brightness(1.15); }
+      100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
     }
     @keyframes drop-ripple {
       0%, 10% { transform: translate(-50%, -50%) scale(.3); opacity: 0; }
@@ -229,6 +236,11 @@
       box-shadow: 0 14px 44px #26000c66;
     }
     .intro-card h1 { margin: 0 0 8px; color: var(--wine); font-size: clamp(25px, 4vw, 36px); text-align: center; }
+    .intro-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto 14px; }
+    .intro-brand img { display: block; width: clamp(54px, 8vw, 76px); aspect-ratio: 1; padding: 3px; border: 2px solid #fff; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px #31101b25; object-fit: contain; }
+    .intro-brand-copy { display: grid; gap: 3px; text-align: left; }
+    .intro-brand-copy span { color: #88676b; font-size: clamp(10px, 1.5vw, 13px); font-weight: 800; }
+    .intro-brand-copy strong { color: var(--wine); font-size: clamp(20px, 3.5vw, 29px); line-height: 1.05; }
     .intro-lead { margin: 0 0 12px; color: #725459; font-weight: 800; line-height: 1.4; text-align: center; }
     .intro-rules { margin: 0 0 14px; padding-left: 23px; color: #54343a; font-size: 14px; font-weight: 700; line-height: 1.4; }
     .intro-rules li + li { margin-top: 5px; }
@@ -298,6 +310,12 @@
       transition: opacity .15s ease, transform .15s ease;
     }
     .status.visible { transform: translate(-50%, 0); opacity: 1; }
+    .status.combo.visible { border-color: #ffd66a; background: linear-gradient(180deg, #fff6d6, #ffe5a5); color: #761323; animation: combo-pop .28s cubic-bezier(.2, .8, .25, 1) both; }
+    @keyframes combo-pop {
+      0% { transform: translate(-50%, 12px) scale(.72); }
+      72% { transform: translate(-50%, -2px) scale(1.08); }
+      100% { transform: translate(-50%, 0) scale(1); }
+    }
     .win-overlay {
       position: absolute;
       z-index: 10;
@@ -469,6 +487,10 @@
       .helper-price { font-size: clamp(8px, 2.35vw, 10px); line-height: 1.05; }
       .intro-overlay { padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
       .intro-card { width: 100%; max-height: 100%; padding: 16px; border-radius: 19px; }
+      .intro-brand { gap: 8px; margin-bottom: 10px; }
+      .intro-brand img { width: 52px; }
+      .intro-brand-copy strong { font-size: clamp(18px, 5vw, 23px); }
+      .intro-brand-copy span { font-size: 10px; }
       .intro-rules { font-size: 13px; }
       .intro-power { grid-template-columns: 42px minmax(0, 1fr); gap: 7px; padding: 5px 7px; }
       .intro-power img { width: 40px; height: 40px; }
@@ -521,7 +543,7 @@
 </head>
 <body>
   <main class="game">
-    <section class="scene" aria-label="Гра з краплинками крові">
+    <section class="scene" aria-label="Гра «Краплинки добра» про групи крові">
       <div class="station-mark" role="img" aria-label="Логотип Полтавської обласної станції переливання крові">
         <img src="assets/station-logo.png" alt="">
       </div>
@@ -562,11 +584,19 @@
 
       <div class="intro-overlay" id="introOverlay">
         <section class="intro-card" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+          <div class="intro-brand">
+            <img src="assets/station-logo.png" alt="Логотип Полтавської обласної станції переливання крові">
+            <div class="intro-brand-copy">
+              <span>Гра Полтавської станції переливання крові</span>
+              <strong>Краплинки добра</strong>
+            </div>
+          </div>
           <h1 id="introTitle">Як грати</h1>
-          <p class="intro-lead">Збирай краплинки, виконуй завдання рівня та набирай бали.</p>
+          <p class="intro-lead">Збирай краплинки, виконуй завдання рівня та набирай бали. Кожна вдала лінія наближає до перемоги!</p>
           <ol class="intro-rules">
             <li>Обмінюй сусідні краплинки, щоб скласти лінію з 3 або більше однакових.</li>
             <li>Збирай краплинки потрібної групи крові. З кожним рівнем ціль зростає на 10.</li>
+            <li>Нові краплі можуть утворити лінію під час падіння — лови каскади й множник комбо!</li>
           </ol>
           <h2>Чарівні допомоги</h2>
           <div class="intro-power-list">
@@ -597,8 +627,9 @@
   <script>
     (() => {
       const size = 6;
-      const difficultyChances = { relaxed: 0.26, standard: 0.20, challenging: 0.14 };
-      const difficultyModes = Object.keys(difficultyChances);
+      const targetDropChance = 0.30;
+      const refillMatchChances = { relaxed: 0.72, standard: 0.58, challenging: 0.44 };
+      const difficultyModes = Object.keys(refillMatchChances);
       const donorWishes = [
         "Дякуємо, що даруєте надію — ваша доброта має велику силу.",
         "Нехай добро, яким ви ділитеся, повертається до вас сторицею.",
@@ -719,7 +750,7 @@
       }
       function randomType(choices = types) {
         const availableTarget = choices.some(type => type.id === target);
-        if (availableTarget && Math.random() < difficultyChances[currentDifficulty]) return target;
+        if (availableTarget && Math.random() < targetDropChance) return target;
         const alternatives = availableTarget ? choices.filter(type => type.id !== target) : choices;
         const pool = alternatives.length ? alternatives : choices;
         return pool[Math.floor(Math.random() * pool.length)].id;
@@ -781,6 +812,36 @@
         return findHintMove() !== null;
       }
 
+      function seedRefillMatch() {
+        if (Math.random() >= refillMatchChances[currentDifficulty]) return new Map();
+        const candidates = [];
+        const considerLine = indices => {
+          const empty = indices.filter(index => cells[index] === null);
+          if (!empty.length) return;
+          const existing = [...new Set(indices.map(index => cells[index]).filter(Boolean))];
+          if (existing.length > 1) return;
+          const type = existing[0] || (Math.random() < 0.72 ? target : types[Math.floor(Math.random() * types.length)].id);
+          candidates.push({ empty, type });
+        };
+
+        for (let row = 0; row < size; row++) {
+          for (let col = 0; col <= size - 3; col++) {
+            considerLine([row * size + col, row * size + col + 1, row * size + col + 2]);
+          }
+        }
+        for (let col = 0; col < size; col++) {
+          for (let row = 0; row <= size - 3; row++) {
+            considerLine([row * size + col, (row + 1) * size + col, (row + 2) * size + col]);
+          }
+        }
+        if (!candidates.length) return new Map();
+
+        const targetLines = candidates.filter(candidate => candidate.type === target);
+        const pool = targetLines.length && Math.random() < 0.7 ? targetLines : candidates;
+        const chosen = pool[Math.floor(Math.random() * pool.length)];
+        return new Map(chosen.empty.map(index => [index, chosen.type]));
+      }
+
       function makeBoard() {
         for (let attempt = 0; attempt < 500; attempt++) {
           const next = [];
@@ -799,7 +860,7 @@
         cells = Array.from({ length: size * size }, (_, index) => types[(index + Math.floor(index / size)) % types.length].id);
       }
 
-      function renderBoard(clear = new Set()) {
+      function renderBoard(clear = new Set(), falling = new Set()) {
         const fragment = document.createDocumentFragment();
         cells.forEach((type, index) => {
           const tile = document.createElement("button");
@@ -809,6 +870,10 @@
           if (selected === index && !busy) tile.classList.add("selected");
           if (syringeFirst === index && activePowerup === "syringe") tile.classList.add("powerup-selected");
           if (clear.has(index)) tile.classList.add("clearing");
+          if (falling.has(index)) {
+            tile.classList.add("falling");
+            tile.style.setProperty("--fall-delay", `${Math.floor(index / size) * 18}ms`);
+          }
           tile.dataset.index = String(index);
           tile.setAttribute("role", "gridcell");
           tile.setAttribute("aria-label", `Краплинка ${type}, рядок ${Math.floor(index / size) + 1}, стовпець ${index % size + 1}`);
@@ -874,9 +939,17 @@
 
       function showStatus(message) {
         statusElement.textContent = message;
+        statusElement.classList.remove("combo");
         statusElement.classList.add("visible");
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => statusElement.classList.remove("visible"), 1700);
+      }
+
+      function showCombo(cascade, points) {
+        statusElement.textContent = `${cascade > 1 ? `КОМБО ×${cascade}!` : "Є ЛІНІЯ!"} +${points.toLocaleString("uk-UA")} балів`;
+        statusElement.classList.add("visible", "combo");
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => statusElement.classList.remove("visible", "combo"), 1300);
       }
 
       function canBuyPowerup(key) {
@@ -1218,7 +1291,7 @@
         try {
           await navigator.share({
             files: [createdTicketFile],
-            title: "Мій ігровий квиток «Краплинки»",
+            title: "Мій ігровий квиток «Краплинки добра»",
             text: `Мій результат: ${score.toLocaleString("uk-UA")} балів на рівні ${level}.`
           });
         } catch (error) {
@@ -1248,11 +1321,14 @@
           cascade++;
           const targetMatches = [...matches].filter(index => cells[index] === target).length;
           collected += targetMatches;
-          score += matches.size * 60 * cascade;
+          const matchPoints = matches.size * 60 * cascade;
+          score += matchPoints;
+          showCombo(cascade, matchPoints);
           updateHud();
           renderBoard(matches);
           await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300);
           for (const index of matches) cells[index] = null;
+          const refillCells = [];
           for (let col = 0; col < size; col++) {
             let destination = size - 1;
             for (let row = size - 1; row >= 0; row--) {
@@ -1263,11 +1339,17 @@
                 destination--;
               }
             }
-            for (let row = destination; row >= 0; row--) cells[row * size + col] = randomType();
+            for (let row = destination; row >= 0; row--) {
+              const index = row * size + col;
+              cells[index] = null;
+              refillCells.push(index);
+            }
           }
+          const seededLine = seedRefillMatch();
+          for (const index of refillCells) cells[index] = seededLine.get(index) || randomType();
           selected = null;
-          renderBoard();
-          await wait(135);
+          renderBoard(new Set(), new Set(refillCells));
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240);
         }
         if (cascade >= 30) makeBoard();
         busy = false;
