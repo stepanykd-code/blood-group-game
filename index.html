@@ -59,6 +59,37 @@
       border-radius: 50%;
       object-fit: contain;
     }
+    .sound-control {
+      position: absolute;
+      z-index: 6;
+      top: 2.3%;
+      left: 2.3%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 9px;
+      border: 1px solid #fff;
+      border-radius: 999px;
+      background: #fffaf2ed;
+      box-shadow: var(--shadow);
+    }
+    .sound-toggle, .effects-toggle {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: #f7e7df;
+      color: var(--wine);
+      font-size: 18px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .sound-toggle:focus-visible, .effects-toggle:focus-visible, .sound-volume:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+    .sound-volume { width: 78px; height: 22px; margin: 0; accent-color: #a51d30; cursor: pointer; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .target-panel {
       position: absolute;
       z-index: 2;
@@ -693,6 +724,15 @@
         padding: 4px;
         transform: translateX(-50%);
       }
+      .sound-control {
+        top: max(1.2%, calc(env(safe-area-inset-top) + 4px));
+        left: auto;
+        right: 2.5%;
+        gap: 4px;
+        padding: 4px 6px;
+      }
+      .sound-toggle, .effects-toggle { width: 34px; height: 34px; }
+      .sound-volume { width: clamp(42px, 13vw, 58px); }
       .target-panel {
         position: static;
         left: auto; top: auto; width: auto; min-height: 0;
@@ -803,6 +843,9 @@
       .hemocon-tutorial-copy { grid-template-columns: minmax(0, 1fr); }
       .helper-price { font-size: 8px; }
       .new-game { padding-inline: 7px; font-size: 10px; }
+      .sound-control { right: 1.5%; gap: 3px; padding: 3px 4px; }
+      .sound-toggle, .effects-toggle { width: 32px; height: 32px; font-size: 17px; }
+      .sound-volume { width: 32px; }
     }
     @media (max-height: 620px) and (orientation: landscape) {
       .scene { width: min(100vw, 150vh); height: min(100vh, 66.6667vw); }
@@ -820,6 +863,12 @@
     <section class="scene" aria-label="Гра «Краплинки добра» про групи крові">
       <div class="station-mark" role="img" aria-label="Логотип Полтавської обласної станції переливання крові">
         <img src="assets/station-logo.png" alt="">
+      </div>
+      <div class="sound-control" role="group" aria-label="Налаштування звуку гри">
+        <button class="sound-toggle" id="soundToggle" type="button" aria-label="Вимкнути музику" aria-pressed="true"><span id="soundIcon" aria-hidden="true">🎵</span></button>
+        <button class="effects-toggle" id="effectsToggle" type="button" aria-label="Вимкнути звукові ефекти" aria-pressed="true"><span id="effectsIcon" aria-hidden="true">✨</span></button>
+        <label class="visually-hidden" for="soundVolume">Гучність звуку гри</label>
+        <input class="sound-volume" id="soundVolume" type="range" min="0" max="100" value="55">
       </div>
 
       <div class="hud-stack">
@@ -1130,6 +1179,35 @@
       const needleHelpButton = document.getElementById("needleHelp");
       const syringeHelpButton = document.getElementById("syringeHelp");
       const centrifugeHelpButton = document.getElementById("centrifugeHelp");
+      const soundToggleButton = document.getElementById("soundToggle");
+      const soundIcon = document.getElementById("soundIcon");
+      const effectsToggleButton = document.getElementById("effectsToggle");
+      const effectsIcon = document.getElementById("effectsIcon");
+      const soundVolumeInput = document.getElementById("soundVolume");
+      const soundStorageKey = "blood-group-game-sound-settings";
+      const soundFiles = {
+        validSwap: "audio-previews/01-valid-swap.wav",
+        invalidMove: "audio-previews/02-invalid-move.wav",
+        lineClear: "audio-previews/03-line-clear.wav",
+        targetProgress: "audio-previews/04-target-progress.wav",
+        cascade: "audio-previews/05-cascade.wav",
+        orderComplete: "audio-previews/06-order-complete.wav",
+        universalCreated: "audio-previews/07-universal-created.wav",
+        universalActivated: "audio-previews/08-universal-activated.wav",
+        plasmaFormed: "audio-previews/09-plasma-formed.wav",
+        plasmaBurst: "audio-previews/10-plasma-burst.wav",
+        hemoconFill: "audio-previews/11-hemocon-fill.wav",
+        hemoconComplete: "audio-previews/12-hemocon-complete.wav",
+        bandageRemoved: "audio-previews/13-bandage-removed.wav",
+        needleHint: "audio-previews/14-needle-hint.wav",
+        syringeSwap: "audio-previews/15-syringe-swap.wav",
+        centrifuge: "audio-previews/16-centrifuge.wav",
+        urgentSuccess: "audio-previews/17-urgent-success.wav",
+        urgentExpired: "audio-previews/18-urgent-expired.wav",
+        levelComplete: "audio-previews/19-level-complete.wav",
+        trophyFinale: "audio-previews/20-blood-cup-finale.wav"
+      };
+      const soundPools = new Map();
       const powerupCosts = { needle: 200, syringe: 2000, centrifuge: 5000 };
       const urgentCallGoal = 2;
       const urgentCallMoveLimit = 12;
@@ -1169,6 +1247,83 @@
       let urgentCall = { active: false, cascades: 0, startMove: 0, lastCascadeMove: -1, lastSettledMove: -1, state: "inactive", notice: "" };
 
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const backgroundMusic = new Audio("assets/game-background-music.mp3");
+      backgroundMusic.loop = true;
+      backgroundMusic.preload = "auto";
+      let musicEnabled = true;
+      let effectsEnabled = true;
+      let soundVolume = 0.55;
+      try {
+        const savedSoundSettings = JSON.parse(localStorage.getItem(soundStorageKey));
+        if (savedSoundSettings && typeof savedSoundSettings === "object") {
+          const savedOverall = typeof savedSoundSettings.enabled === "boolean" ? savedSoundSettings.enabled : true;
+          musicEnabled = typeof savedSoundSettings.musicEnabled === "boolean" ? savedSoundSettings.musicEnabled : savedOverall;
+          effectsEnabled = typeof savedSoundSettings.effectsEnabled === "boolean" ? savedSoundSettings.effectsEnabled : savedOverall;
+          if (Number.isFinite(savedSoundSettings.volume)) soundVolume = Math.min(1, Math.max(0, savedSoundSettings.volume));
+        }
+      } catch {}
+      function saveSoundSettings() {
+        try { localStorage.setItem(soundStorageKey, JSON.stringify({ enabled: musicEnabled && effectsEnabled, musicEnabled, effectsEnabled, volume: soundVolume })); }
+        catch {}
+      }
+      function updateSoundControls() {
+        soundIcon.textContent = musicEnabled && soundVolume > 0 ? "🎵" : "🔇";
+        soundToggleButton.setAttribute("aria-pressed", String(musicEnabled));
+        soundToggleButton.setAttribute("aria-label", musicEnabled ? "Вимкнути музику" : "Увімкнути музику");
+        effectsIcon.textContent = effectsEnabled ? "✨" : "🔕";
+        effectsToggleButton.setAttribute("aria-pressed", String(effectsEnabled));
+        effectsToggleButton.setAttribute("aria-label", effectsEnabled ? "Вимкнути звукові ефекти" : "Увімкнути звукові ефекти");
+        soundVolumeInput.value = String(Math.round(soundVolume * 100));
+        soundVolumeInput.setAttribute("aria-valuetext", `${Math.round(soundVolume * 100)} відсотків`);
+        syncBackgroundMusic();
+      }
+      function syncBackgroundMusic() {
+        const shouldPlay = gameStarted && musicEnabled && soundVolume > 0;
+        backgroundMusic.volume = musicEnabled ? soundVolume * 0.36 : 0;
+        if (!shouldPlay) {
+          backgroundMusic.pause();
+          return;
+        }
+        if (backgroundMusic.paused) {
+          try {
+            const playback = backgroundMusic.play();
+            playback?.catch(() => {});
+          } catch {}
+        }
+      }
+      function getSoundPool(name) {
+        const source = soundFiles[name];
+        if (!source) return [];
+        if (!soundPools.has(name)) {
+          const pool = Array.from({ length: 3 }, () => {
+            const audio = new Audio(source);
+            audio.preload = "auto";
+            return audio;
+          });
+          soundPools.set(name, { voices: pool, nextVoice: 0 });
+        }
+        return soundPools.get(name);
+      }
+      function playSound(name, gain = 1) {
+        if (!effectsEnabled || soundVolume <= 0 || !soundFiles[name]) return;
+        try {
+          const pool = getSoundPool(name);
+          const available = pool.voices.find(voice => voice.paused || voice.ended);
+          const audio = available || pool.voices[pool.nextVoice++ % pool.voices.length];
+          audio.volume = Math.min(1, Math.max(0, soundVolume * gain));
+          audio.currentTime = 0;
+          const playback = audio.play();
+          playback?.catch(() => {});
+        } catch {}
+      }
+      function preloadCommonSounds() {
+        for (const name of ["validSwap", "invalidMove", "lineClear", "targetProgress", "cascade"]) {
+          try {
+            const pool = getSoundPool(name);
+            pool.voices[0].load();
+          } catch {}
+        }
+      }
       const randomTarget = () => types[Math.floor(Math.random() * types.length)].id;
       const randomDifficulty = () => difficultyModes[Math.floor(Math.random() * difficultyModes.length)];
       function prepareLevelOrders() {
@@ -1188,9 +1343,11 @@
       function addObjectiveProgress(amount) {
         const earned = Math.min(Math.max(0, amount), Math.max(0, orderGoal - orderCollected));
         if (!earned) return 0;
+        playSound("targetProgress", 0.36);
         orderCollected += earned;
         collected += earned;
         if (orderCollected >= orderGoal && orderIndex < orderTypes.length - 1) {
+          playSound("orderComplete", 0.62);
           orderIndex++;
           target = orderTypes[orderIndex];
           orderGoal = orderGoals[orderIndex];
@@ -1242,6 +1399,7 @@
         if (urgentCall.cascades >= urgentCallGoal) {
           urgentCall.active = false;
           urgentCall.state = "success";
+          playSound("urgentSuccess", 0.72);
           score += urgentCallReward;
           urgentCall.notice = `Терміновий виклик виконано! +${urgentCallReward} бонусних балів.`;
         }
@@ -1253,6 +1411,7 @@
         if (urgentCall.active && moves > urgentCall.startMove && moves - urgentCall.startMove >= urgentCallMoveLimit) {
           urgentCall.active = false;
           urgentCall.state = "failed";
+          playSound("urgentExpired", 0.48);
           urgentCall.notice = "Терміновий виклик завершився — основне завдання рівня триває без штрафу.";
         }
         updateUrgentCallHud();
@@ -1713,6 +1872,7 @@
         busy = true;
         selected = null;
         moves++;
+        playSound("hemoconFill", 0.42);
         const source = boardElement.querySelector(`.tile[data-index="${dropIndex}"]`);
         const visual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
         if (source && visual && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1760,6 +1920,7 @@
       async function activateReadyHemocon(hemocon) {
         const projectedCells = getHemoconProjectionIndices(hemocon);
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        playSound("hemoconComplete", 0.72);
         const hemoconIndex = hemocons.indexOf(hemocon);
         const liveVisual = boardElement.querySelector(`.hemocon[data-hemocon-index="${hemoconIndex}"]`);
         let maxProjectionDelay = 0;
@@ -1880,6 +2041,7 @@
         clearHint();
         score -= powerupCosts.needle;
         updateHud();
+        playSound("needleHint", 0.55);
         move.forEach(index => boardElement.children[index]?.classList.add("hint"));
         showStatus("Голочка підсвітила можливий хід.");
         paidHintTimer = setTimeout(() => {
@@ -1920,6 +2082,7 @@
         [specials[first], specials[second]] = [specials[second], specials[first]];
         score -= powerupCosts.syringe;
         moves++;
+        playSound("syringeSwap", 0.65);
         busy = true;
         renderBoard();
         updateHud();
@@ -1943,6 +2106,7 @@
         });
         score -= powerupCosts.centrifuge;
         moves++;
+        playSound("centrifuge", 0.65);
         busy = true;
         renderBoard();
         updateHud();
@@ -2229,6 +2393,7 @@
         complete = true;
         clearHint();
         const finalLevelCompleted = level === 10;
+        playSound(finalLevelCompleted ? "trophyFinale" : "levelComplete", 0.76);
         winCard.classList.toggle("final-celebration", finalLevelCompleted);
         finalTrophy.hidden = !finalLevelCompleted;
         winTitle.textContent = finalLevelCompleted ? "Вітаємо, чемпіоне!" : `Рівень ${level} пройдено!`;
@@ -2281,6 +2446,7 @@
         clearHint();
         plasmaTap = null;
         selected = null;
+        playSound("plasmaBurst", 0.72);
         const orderIndexAtStart = orderIndex;
         const [row, col] = coords(index);
         const clearing = new Set();
@@ -2341,6 +2507,7 @@
             recordUrgentCallCascade();
           }
           const matches = new Set(runs.flatMap(run => run.indices));
+          const activatedUniversal = [...matches].some(index => specials[index]?.kind === "wild");
           const targetCells = new Set(runs.filter(run => run.type === target).flatMap(run => run.indices));
           const creationRun = level >= 2 ? runs
             .filter(run => run.indices.length >= 5 && run.indices.every(index => !specials[index]))
@@ -2372,6 +2539,11 @@
           const matchPoints = (cleared.size + (createdIndex === null ? 0 : 1)) * 60 * cascade + bandagesToRemove.size * 200;
           score += matchPoints;
           bandagesRemovedThisTurn += bandagesToRemove.size;
+          if (bandagesToRemove.size) playSound("bandageRemoved", 0.5);
+          playSound(resolution.cascadeWaves > 1 ? "cascade" : "lineClear", resolution.cascadeWaves > 1 ? 0.68 : 0.56);
+          if (activatedUniversal) playSound("universalActivated", 0.62);
+          if (creationRun) playSound("universalCreated", 0.62);
+          if (plasmaRun) playSound("plasmaFormed", 0.58);
           showCombo(cascade, matchPoints);
           updateHud();
           renderBoard(visualCleared);
@@ -2398,7 +2570,9 @@
         if (orderTransitionPending) {
           orderTransitionPending = false;
           showStatus(`Перше замовлення виконано! Тепер збери ${orderGoal} краплинок групи ${target}.`);
-        } else if (bandagesRemovedThisTurn) showStatus(`${bandagesRemovedThisTurn === 1 ? "Медичну пов’язку знято" : `Медичних пов’язок знято: ${bandagesRemovedThisTurn}`}! +${(bandagesRemovedThisTurn * 200).toLocaleString("uk-UA")} бонусних балів.`);
+        } else if (bandagesRemovedThisTurn) {
+          showStatus(`${bandagesRemovedThisTurn === 1 ? "Медичну пов’язку знято" : `Медичних пов’язок знято: ${bandagesRemovedThisTurn}`}! +${(bandagesRemovedThisTurn * 200).toLocaleString("uk-UA")} бонусних балів.`);
+        }
         else if (wildCreatedThisTurn) showStatus("Лінія з 5 краплин створила універсальну!");
         else if (plasmaCreatedThisTurn) showStatus("Лінія з 4 краплин створила плазмову краплю!");
         settleUrgentCallMove();
@@ -2426,12 +2600,14 @@
           [cells[first], cells[second]] = [cells[second], cells[first]];
           [specials[first], specials[second]] = [specials[second], specials[first]];
           renderBoard();
+          playSound("invalidMove", 0.48);
           showStatus("Обміняй краплинки так, щоб утворити лінію з трьох.");
           resetHintTimer();
           return false;
         }
         busy = true;
         moves++;
+        playSound("validSwap", 0.55);
         renderBoard();
         updateHud();
         await wait(90);
@@ -2704,8 +2880,26 @@
       needleHelpButton.addEventListener("click", useNeedle);
       syringeHelpButton.addEventListener("click", toggleSyringe);
       centrifugeHelpButton.addEventListener("click", useCentrifuge);
+      soundToggleButton.addEventListener("click", () => {
+        musicEnabled = !musicEnabled;
+        saveSoundSettings();
+        updateSoundControls();
+      });
+      effectsToggleButton.addEventListener("click", () => {
+        effectsEnabled = !effectsEnabled;
+        saveSoundSettings();
+        updateSoundControls();
+        if (effectsEnabled) preloadCommonSounds();
+      });
+      soundVolumeInput.addEventListener("input", () => {
+        soundVolume = Number(soundVolumeInput.value) / 100;
+        saveSoundSettings();
+        updateSoundControls();
+      });
       startGameButton.addEventListener("click", () => {
         gameStarted = true;
+        preloadCommonSounds();
+        syncBackgroundMusic();
         introOverlay.hidden = true;
         updateHud();
         resetHintTimer();
@@ -2716,6 +2910,7 @@
       plasmaTutorialStartButton.addEventListener("click", finishPlasmaTutorial);
       bandageTutorialStartButton.addEventListener("click", finishBandageTutorial);
       urgentCallTutorialStartButton.addEventListener("click", finishUrgentCallTutorial);
+      updateSoundControls();
       startNewGame();
       startGameButton.focus();
     })();
