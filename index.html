@@ -113,7 +113,7 @@
       display: grid;
       place-items: center;
       overflow: hidden;
-      padding: clamp(3px, .4vw, 5px);
+      padding: 0;
       border: 2px solid var(--drop-color, #8e384088);
       border-radius: clamp(4px, .55vw, 9px);
       background: var(--drop-color, #fff5e5);
@@ -126,13 +126,6 @@
     .tile img { display: block; width: 100%; height: 100%; border-radius: clamp(2px, .35vw, 5px); object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
     .tile:not(.bandage) > img:not(.special-emblem) { position: absolute; inset: 0; }
     .tile.selected { transform: scale(.92); box-shadow: inset 0 0 0 3px var(--gold), 0 0 13px #ffe279; filter: brightness(1.08); }
-    .tile.invalid-swap { animation: invalid-swap .28s ease-in-out; }
-    @keyframes invalid-swap {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-7%); }
-      55% { transform: translateX(6%); }
-      78% { transform: translateX(-3%); }
-    }
     .tile.clearing {
       position: relative;
       z-index: 1;
@@ -2292,25 +2285,53 @@
         resetHintTimer();
       }
 
+      async function animateTileExchange(first, second, firstSourceRect, secondSourceRect) {
+        const firstTile = boardElement.children[first];
+        const secondTile = boardElement.children[second];
+        if (!firstTile || !secondTile) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || typeof firstTile.animate !== "function") {
+          await wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
+          return;
+        }
+        const firstDestination = firstTile.getBoundingClientRect();
+        const secondDestination = secondTile.getBoundingClientRect();
+        const duration = 180;
+        const easing = "cubic-bezier(.2,.8,.25,1)";
+        const firstAnimation = firstTile.animate([
+          { transform: "translate(" + (secondSourceRect.left - firstDestination.left) + "px," + (secondSourceRect.top - firstDestination.top) + "px)" },
+          { transform: "translate(0,0)" }
+        ], { duration, easing });
+        const secondAnimation = secondTile.animate([
+          { transform: "translate(" + (firstSourceRect.left - secondDestination.left) + "px," + (firstSourceRect.top - secondDestination.top) + "px)" },
+          { transform: "translate(0,0)" }
+        ], { duration, easing });
+        await Promise.all([firstAnimation.finished.catch(() => {}), secondAnimation.finished.catch(() => {})]);
+      }
+
       async function swap(first, second) {
         if (busy || complete || cells[first] === null || cells[second] === null || !isAdjacent(first, second)) return false;
         clearHint();
         selected = null;
+        const firstSourceRect = boardElement.children[first]?.getBoundingClientRect();
+        const secondSourceRect = boardElement.children[second]?.getBoundingClientRect();
+        if (!firstSourceRect || !secondSourceRect) return false;
         const oldFirstType = cells[first], oldSecondType = cells[second];
         const oldFirstSpecial = specials[first], oldSecondSpecial = specials[second];
         rememberMoveAnchor(first, second);
         swapDrops(first, second);
         if (!findMatches().size) {
+          busy = true;
+          renderBoard();
+          updateHud();
+          await animateTileExchange(first, second, firstSourceRect, secondSourceRect);
           cells[first] = oldFirstType; cells[second] = oldSecondType;
           specials[first] = oldFirstSpecial; specials[second] = oldSecondSpecial;
           currentMoveAnchor = null;
           renderBoard();
-          boardElement.children[first]?.classList.add("invalid-swap");
-          boardElement.children[second]?.classList.add("invalid-swap");
-          setTimeout(() => {
-            boardElement.children[first]?.classList.remove("invalid-swap");
-            boardElement.children[second]?.classList.remove("invalid-swap");
-          }, 320);
+          await animateTileExchange(first, second, firstSourceRect, secondSourceRect);
+          busy = false;
+          renderBoard();
+          updateHud();
           showStatus("Обміняй краплинки так, щоб утворити лінію з трьох.");
           resetHintTimer();
           return false;
@@ -2320,7 +2341,7 @@
         countMissionMove();
         renderBoard();
         updateHud();
-        await wait(90);
+        await animateTileExchange(first, second, firstSourceRect, secondSourceRect);
         await resolveBoard();
         return true;
       }
